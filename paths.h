@@ -22,8 +22,12 @@
 #ifndef H_PATHS
 #define H_PATHS
 
-#ifndef ROMFILE
-#define ROMFILE "NabuPC-U53-90020060-RevA-2732.bin"
-#endif /* ROMFILE */
+#ifndef ROMFILE1
+#define ROMFILE1 "NabuPC-U53-90020060-RevA-2732.bin"
+#endif /* ROMFILE1 */
+
+#ifndef ROMFILE2
+#define ROMFILE2 "NabuPC-U53-90020060-RevB-2764.bin"
+#endif /* ROMFILE1 */
 
 #endif /* H_PATHS */

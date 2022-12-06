@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 /* SDL2 include */
 #include <SDL.h>
@@ -46,7 +47,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.02"
+#define VERSION "0.03"
 
 /*
  * Forward declaration.
@@ -57,9 +58,9 @@ static void reinit_cpu (void);
  * The NABU has 64K RAM.
  * 
  * Early models have 4K ROM, there is also a version with 8K ROM.
- * This version only supports the 4K version.
  */
-static uint8_t RAM[65536], ROM[4096];
+static uint8_t RAM[65536], ROM[8192];
+int romsize;
 
 /*
  * Internal state for emulated chips.
@@ -102,7 +103,7 @@ uint32_t *display;
 
 uint8_t mem_read (void *blob, uint16_t addr)
 {
- if ((!(ctrlreg&0x01)) && (addr<0x1000)) return ROM[addr];
+ if ((!(ctrlreg&0x01)) && (addr<romsize)) return ROM[addr];
  
  return RAM[addr];
 }
@@ -504,34 +505,37 @@ static void reinit_cpu (void)
  * Currently only the 4K version is supported; it will be trivial to also add
  * support for the 8K version.
  */
-static int init_rom (void)
+static int init_rom (int override)
 {
  int e;
  FILE *file;
  
- file=fopen(ROMFILE, "rb");
+ file=override?0:fopen(ROMFILE1, "rb");
  if (!file)
  {
-  fprintf (stderr, "FATAL: Failed to open ROM file '" ROMFILE "'\n  (%s)\n",
-           strerror(errno));
-  
-  return 1;
+  file=fopen(ROMFILE2, "rb");
+  if (!file)
+  {
+   fprintf (stderr, "FATAL: Failed to open ROM file\n");
+   return 1;
+  }
  }
  fseek(file, 0, SEEK_END);
- if (ftell(file)!=4096)
+ romsize=ftell(file);
+ if ((romsize!=4096)&&(romsize!=8192))
  {
   fclose(file);
-  fprintf (stderr, "FATAL: Size of ROM file '" ROMFILE "' is incorrect\n"
-           "  (expected size is 4096 bytes)\n");
+  fprintf (stderr, "FATAL: Size of ROM file is incorrect\n"
+           "  (expected size is 4096 or 8192 bytes)\n");
   
   return 2;
  }
  fseek(file, 0, SEEK_SET);
- e=fread(ROM, 1, 4096, file);
- if (e<4096)
+ e=fread(ROM, 1, romsize, file);
+ if (e<romsize)
  {
-  fprintf (stderr, "WARNING: Short read on ROM file '" ROMFILE "'\n"
-           "  (got %d bytes, expected 4096)\n", e);
+  fprintf (stderr, "WARNING: Short read on ROM file\n"
+           "  (got %d bytes, expected %u)\n", e, romsize);
  }
  fclose(file);
  return 0;
@@ -539,10 +543,28 @@ static int init_rom (void)
 
 int main (int argc, char **argv)
 {
+ int e;
+ 
+ int override;
+ 
  SDL_version sdlver;
  int scanline;
  
  SDL_GetVersion(&sdlver);
+ 
+ override=0;
+ while (-1!=(e=getopt(argc, argv, "8")))
+ {
+  switch (e)
+  {
+   case '8':
+    override=1;
+    break;
+   default:
+    fprintf (stderr, "usage: %s [-8]\n", argv[0]);
+    return 1;
+  }
+ }
 
  /* Copyrights for all components */
  printf ("Marduk version " VERSION " NABU Emulator\n"
@@ -633,9 +655,10 @@ int main (int argc, char **argv)
   * will flick off the lights and unset TV mode - we intentionally set them on
   * as the initial status.
   */
- if (init_rom()) return 1;
+ if (init_rom(override)) return 1;
  ctrlreg=0x3A;
  
+ printf ("ROM size: %u KB\n", romsize>>10);
  printf ("Emulation ready to start\n");
  
  /*
