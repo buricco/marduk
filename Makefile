@@ -1,0 +1,44 @@
+# Copyright 2022 S. V. Nickolas.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following condition:  The above copyright
+# notice and this permission notice shall be included in all copies or
+# substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+CFLAGS := $(CFLAGS) $(shell sdl2-config --cflags)
+LIBS   := $(LIBS) $(shell sdl2-config --libs)
+
+all:	marduk
+
+marduk:	emu2149.o main.o tms9918.o tms_util.o z80.o
+	$(CC) $(CFLAGS) -o marduk emu2149.o main.o tms9918.o tms_util.o z80.o $(LIBS)
+
+emu2149.o:	emu2149.c emu2149.h
+	$(CC) $(CFLAGS) -c -o emu2149.o emu2149.c
+
+main.o:	main.c emu2149.h tms9918.h tms_util.h z80.h
+	$(CC) $(CFLAGS) -c -o main.o main.c
+
+tms9918.o:	tms9918.c tms9918.h
+	$(CC) $(CFLAGS) -c -o tms9918.o tms9918.c
+
+tms_util.o:	tms_util.c tms9918.h tms_util.h
+	$(CC) $(CFLAGS) -c -o tms_util.o tms_util.c
+
+z80.o:	z80.c z80.h
+	$(CC) $(CFLAGS) -c -o z80.o z80.c
+
+clean:
+	rm -f marduk emu2149.o main.o tms9918.o tms_util.o z80.o
