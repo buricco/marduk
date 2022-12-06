@@ -1,0 +1,13 @@
+0.02 (22120612)
+===============
+
+  * Improved the internal documentation slightly.
+  * More diagnostics.
+  * More attempt to hook up the PSG (not done yet).
+  * Prettied up the LEDs.
+  * Bug fixed where a key-up event fell through into the key-down handler.
+
+0.01 (22120608)
+===============
+
+  First official release.

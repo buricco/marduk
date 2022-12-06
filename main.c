@@ -46,7 +46,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.01"
+#define VERSION "0.02"
 
 /*
  * Forward declaration.
@@ -118,9 +118,11 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
  * 41 - AY-8910 latch (?)
  * 80 - cable modem
  * 90 - keyboard (mostly ASCII)
- * 91 - keyboard strobe
- * A0 - TMS9918 data  = EZCGI TMS9918 read/write data
- * A1 - TMS9918 latch = EZCGI TMS9918 write control register
+ * 91 - keyboard strobe (also written to, not sure what for yet)
+ *      This should call an interrupt but not sure how interrupts are supposed
+ *      to work because I'm a 65C02 person, not a Z80 person.
+ * A0 - TMS9918 read/write data
+ * A1 - TMS9918 write control register
  * B0 - parallel port data
  * 
  * Control reg:
@@ -133,6 +135,9 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
  * 
  * The keyboard sends 0x95 when powering up.
  * Every so often (~3.7 sec.) it should send 0x94 to kick the dog.
+ * 
+ * https://vintagecomputer.ca/files/Nabu/
+ *   Nabu_Computer_Technical_Manual_by_MJP-compressed.pdf
  */
 
 uint8_t port_read (z80 *mycpu, uint8_t port)
@@ -141,6 +146,12 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
  
  switch (port)
  {
+  case 0x40: /* PSG data? */
+   
+   return 0;
+  case 0x41: /* PSG addr? */
+   
+   return 0;
   case 0x90: /* Not sure if this is the right action */
    t=next_key;
    next_key=0;
@@ -168,6 +179,12 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
 #ifdef PORT_DEBUG
    printf ("Control register set to 0x%02X\n", val);
 #endif
+   return;
+  case 0x40: /* PSG data? */
+   
+   return;
+  case 0x41: /* PSG addr? */
+   
    return;
   case 0xA0:
    vrEmuTms9918WriteData(vdp, val);
@@ -230,45 +247,50 @@ void every_scanline (void)
       next_key=0xFA;
       break;
     }
+    break;
    case SDL_KEYDOWN:
     if (event.key.keysym.sym<128)
     {
+     static char *shiftnums=")!@#$%^&*(";
+     SDL_Keymod m;
+     int k;
+
      /*
       * "Make key" codes for arrows.
       */
-    switch (event.key.keysym.sym)
-    {
-     case SDLK_UP:
-      next_key=0xE2;
-      break;
-     case SDLK_DOWN:
-      next_key=0xE3;
-      break;
-     case SDLK_LEFT:
-      next_key=0xE1;
-      break;
-     case SDLK_RIGHT:
-      next_key=0xE0;
-      break;
-     case SDLK_HOME: /* « */
-      next_key=0xE5;
-      break;
-     case SDLK_END: /* » */
-      next_key=0xE4;
-      break;
-     case SDLK_INSERT: /* YES */
-      next_key=0xE7;
-      break;
-     case SDLK_DELETE: /* NO */
-      next_key=0xE6;
-      break;
-     case SDLK_PAUSE:
-      next_key=0xE9;
-      break;
-     case SDLK_PAGEDOWN:
-      next_key=0xEA;
-      break;
-    }
+     switch (event.key.keysym.sym)
+     {
+      case SDLK_UP:
+       next_key=0xE2;
+       break;
+      case SDLK_DOWN:
+       next_key=0xE3;
+       break;
+      case SDLK_LEFT:
+       next_key=0xE1;
+       break;
+      case SDLK_RIGHT:
+       next_key=0xE0;
+       break;
+      case SDLK_HOME: /* « */
+       next_key=0xE5;
+       break;
+      case SDLK_END: /* » */
+       next_key=0xE4;
+       break;
+      case SDLK_INSERT: /* YES */
+       next_key=0xE7;
+       break;
+      case SDLK_DELETE: /* NO */
+       next_key=0xE6;
+       break;
+      case SDLK_PAUSE:
+       next_key=0xE9;
+       break;
+      case SDLK_PAGEDOWN:
+       next_key=0xEA;
+       break;
+     }
      
      /*
       * Shift/Ctrl translation.  Not the most efficient method.
@@ -280,9 +302,6 @@ void every_scanline (void)
       * The NABU keyboard doesn't actually have a |\ key, but we'll just
       * forget that for now.
       */
-     static char *shiftnums=")!@#$%^&*(";
-     SDL_Keymod m;
-     int k;
      
      k=event.key.keysym.sym;
      m=SDL_GetModState();
@@ -333,11 +352,12 @@ void every_scanline (void)
     {
      /* F3 - reset */
      case SDLK_F3:
+      printf ("Reset pressed\n");
       reinit_cpu();
       break;
      /* Alt-F4 - exit */
      case SDLK_F4:
-      if (SDL_GetModState()&(KMOD_LALT|KMOD_RALT)) death_flag=1;
+      if (SDL_GetModState()&KMOD_ALT) death_flag=1;
       break;
      /* F10 - also exit */
      case SDLK_F10:
@@ -414,7 +434,22 @@ void render_scanline (int line)
   */
  if ((line>=232)&&(line<236))
  {
+  uint32_t le[3], ri[3];
+  
   r=line*1280;
+  
+  if (line==232)
+  {
+   le[0]=display[r+592];  ri[0]=display[r+599];
+   le[1]=display[r+608];  ri[1]=display[r+615];
+   le[2]=display[r+624];  ri[2]=display[r+631];
+  }
+  else if (line==235)
+  {
+   le[0]=display[r+640+592];  ri[0]=display[r+640+599];
+   le[1]=display[r+640+608];  ri[1]=display[r+640+615];
+   le[2]=display[r+640+624];  ri[2]=display[r+640+631];
+  }
   
   for (x=592; x<600; x++) /* Yellow LED */
    display[r+x]=display[r+640+x]=(ctrlreg&0x20)?0xFFFFFF00:0;
@@ -422,6 +457,19 @@ void render_scanline (int line)
    display[r+x]=display[r+640+x]=(ctrlreg&0x10)?0xFFFF0000:0;
   for (x=624; x<632; x++) /* Green LED */
    display[r+x]=display[r+640+x]=(ctrlreg&0x08)?0xFF00FF00:0;
+
+  if (line==232)
+  {
+   display[r+592]=le[0];  display[r+599]=ri[0];
+   display[r+608]=le[1];  display[r+615]=ri[1];
+   display[r+624]=le[2];  display[r+631]=ri[2];
+  }
+  else if (line==235)
+  {
+   display[r+640+592]=le[0];  display[r+640+599]=ri[0];
+   display[r+640+608]=le[1];  display[r+640+615]=ri[1];
+   display[r+640+624]=le[2];  display[r+640+631]=ri[2];
+  }
  }
 }
 
@@ -588,6 +636,8 @@ int main (int argc, char **argv)
  if (init_rom()) return 1;
  ctrlreg=0x3A;
  
+ printf ("Emulation ready to start\n");
+ 
  /*
   * Get ready to start the emulated Z80.
   * 
@@ -620,6 +670,7 @@ int main (int argc, char **argv)
  }
  
  /* Clean up and exit properly. */
+ printf ("Shutting down emulation\n");
  PSG_delete(psg);
  vrEmuTms9918Destroy(vdp);
  free(display);
