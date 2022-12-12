@@ -1,6 +1,6 @@
 /*
  * Copyright 2022 S. V. Nickolas.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation
@@ -9,7 +9,7 @@
  * Software is furnished to do so, subject to the following condition:  The
  * above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -23,7 +23,7 @@
  * Note: Some parts of this program have other copyrights.  See the individual
  *       files for specific copyright information.  SDL2 has different but
  *       similar license terms.
- * 
+ *
  * Testing has currently only been done under Debian 11 Linux.
  */
 
@@ -56,7 +56,7 @@ static void reinit_cpu (void);
 
 /*
  * Speed control.
- * 
+ *
  * Not exact, but it helps keep the speed more or less even based on how long
  * it takes to run one scanline's worth of code.
  */
@@ -66,7 +66,7 @@ struct timespec timespec;
 
 /*
  * The NABU has 64K RAM.
- * 
+ *
  * Early models have 4K ROM, there is also a version with 8K ROM.
  */
 static uint8_t RAM[65536], ROM[8192];
@@ -74,7 +74,7 @@ int romsize;
 
 /*
  * Internal state for emulated chips.
- * 
+ *
  * This means both chips with external cores and internal cores.
  */
 z80 cpu;
@@ -91,7 +91,7 @@ int death_flag;
 
 /*
  * SDL2 structure pointers.
- * 
+ *
  * display is a dynamically allocated offscreen buffer used for rendering the
  * VDP data, or the generated NTSC noise.
  */
@@ -102,8 +102,8 @@ SDL_Texture *texture;
 uint32_t *display;
 
 /*
- * Emulation of the NABU memory map. 
- * 
+ * Emulation of the NABU memory map.
+ *
  * Unlike 6502 and 68000 systems, but like x86, the Z80 has two separate
  * memory maps - one for RAM and ROM, and one for I/O devices.  This makes it
  * much easier to interface a full 64K of RAM to a Z80, where double-banking
@@ -114,7 +114,7 @@ uint32_t *display;
 uint8_t mem_read (void *blob, uint16_t addr)
 {
  if ((!(ctrlreg&0x01)) && (addr<romsize)) return ROM[addr];
- 
+
  return RAM[addr];
 }
 
@@ -135,7 +135,7 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
  * A0 - TMS9918 read/write data
  * A1 - TMS9918 write control register
  * B0 - parallel port data
- * 
+ *
  * Control reg:
  * 01 - ROM disable
  * 02 - enable video
@@ -143,10 +143,10 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
  * 08 - green (check) LED
  * 10 - red (alert) LED
  * 20 - yellow (pause) LED
- * 
+ *
  * The keyboard sends 0x95 when powering up.
  * Every so often (~3.7 sec.) it should send 0x94 to kick the dog.
- * 
+ *
  * https://vintagecomputer.ca/files/Nabu/
  *   Nabu_Computer_Technical_Manual_by_MJP-compressed.pdf
  */
@@ -154,14 +154,14 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
 uint8_t port_read (z80 *mycpu, uint8_t port)
 {
  uint8_t t;
- 
+
  switch (port)
  {
   case 0x40: /* PSG data? */
-   
+
    return 0;
   case 0x41: /* PSG addr? */
-   
+
    return 0;
   case 0x90: /* Not sure if this is the right action */
    t=next_key;
@@ -192,10 +192,10 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
 #endif
    return;
   case 0x40: /* PSG data? */
-   
+
    return;
   case 0x41: /* PSG addr? */
-   
+
    return;
   case 0xA0:
    vrEmuTms9918WriteData(vdp, val);
@@ -309,25 +309,25 @@ void every_scanline (void)
        next_key=0xEA;
        break;
      }
-     
+
      /*
       * Shift/Ctrl translation.  Not the most efficient method.
-      * 
+      *
       * The NABU keyboard looks like a standard modern ASCII layout (not the
       * strict ASCII layout used by some older computers).  Caps Lock is off
       * by default.
-      * 
+      *
       * The NABU keyboard doesn't actually have a |\ key, but we'll just
       * forget that for now.
       */
-     
+
      k=event.key.keysym.sym;
      m=SDL_GetModState();
      if (m&KMOD_CTRL)
      {
       if (k=='[') k=0x1B;
       if (k=='\\') k=0x1C;
-      if (k==']') k==0x1D;
+      if (k==']') k=0x1D;
       if (k=='-') k=0x1F;
      }
      if (m&KMOD_SHIFT)
@@ -400,14 +400,14 @@ void render_scanline (int line)
  uint8_t a_scanline[256];
  uint32_t g_scanline[320];
  if (line>239) return;
- 
+
  /*
   * To note:
-  * 
+  *
   * The background color is register 7, AND 0x0F.
   * The border is 64 pels left and right, 48 top and bottom, thus 512x384 in a
   * 640x480 window.
-  * 
+  *
   * The palette is stored RGBA, but we use ARGB; accomodate it.
   */
  bg=0xFF000000 | (vrEmuTms9918Palette[vrEmuTms9918RegValue(vdp, 7)&0x0F]>>8);
@@ -418,7 +418,7 @@ void render_scanline (int line)
   for (x=0; x<256; x++)
    g_scanline[x+32]=vrEmuTms9918Palette[a_scanline[x]]>>8;
  }
- 
+
  /* Double-scan. */
  r=line*1280;
  for (x=0; x<320; x++)
@@ -426,10 +426,10 @@ void render_scanline (int line)
   display[r+(x<<1)]=display[r+1+(x<<1)]=
    display[r+640+(x<<1)]=display[r+641+(x<<1)]=g_scanline[x];
  }
- 
+
  /*
   * If the display is in "TV" mode, just spew some NTSC noise into the buffer.
-  * 
+  *
   * This actually looks pretty realistic (I grew up in the days of aerials and
   * 3 major TV networks, and am well acquainted with the appearance of NTSC
   * noise).
@@ -437,7 +437,7 @@ void render_scanline (int line)
  if (!(ctrlreg&0x02))
  {
   uint32_t c;
-  
+
   r=line*1280;
   for (x=0; x<1280; x++)
   {
@@ -445,19 +445,19 @@ void render_scanline (int line)
    display[r+x]=0xFF000000 | (c<<16) | (c<<8) | (c);
   }
  }
- 
+
  /*
   * Draw the LEDs.
-  * 
+  *
   * They will appear in the bottom right corner, in the order in which
   * they appear on the system unit.
   */
  if ((line>=232)&&(line<236))
  {
   uint32_t le[3], ri[3];
-  
+
   r=line*1280;
-  
+
   if (line==232)
   {
    le[0]=display[r+592];  ri[0]=display[r+599];
@@ -470,7 +470,7 @@ void render_scanline (int line)
    le[1]=display[r+640+608];  ri[1]=display[r+640+615];
    le[2]=display[r+640+624];  ri[2]=display[r+640+631];
   }
-  
+
   for (x=592; x<600; x++) /* Yellow LED */
    display[r+x]=display[r+640+x]=(ctrlreg&0x20)?0xFFFFFF00:0;
   for (x=608; x<616; x++) /* Red LED */
@@ -495,7 +495,7 @@ void render_scanline (int line)
 
 /*
  * Set up the CPU emulation.
- * 
+ *
  * Initialize the function pointers and call the CPU emulator's init code.
  */
 static void init_cpu (void)
@@ -512,7 +512,7 @@ static void init_cpu (void)
 static void reinit_cpu (void)
 {
  void *tmp;
- 
+
  tmp=cpu.userdata;
  init_cpu();
  cpu.userdata=tmp;
@@ -520,7 +520,7 @@ static void reinit_cpu (void)
 
 /*
  * Open ROM.
- * 
+ *
  * Currently only the 4K version is supported; it will be trivial to also add
  * support for the 8K version.
  */
@@ -528,7 +528,7 @@ static int init_rom (int override)
 {
  int e;
  FILE *file;
- 
+
  file=override?0:fopen(ROMFILE1, "rb");
  if (!file)
  {
@@ -546,7 +546,7 @@ static int init_rom (int override)
   fclose(file);
   fprintf (stderr, "FATAL: Size of ROM file is incorrect\n"
            "  (expected size is 4096 or 8192 bytes)\n");
-  
+
   return 2;
  }
  fseek(file, 0, SEEK_SET);
@@ -563,14 +563,14 @@ static int init_rom (int override)
 int main (int argc, char **argv)
 {
  int e;
- 
+
  int override;
- 
+
  SDL_version sdlver;
  int scanline;
- 
+
  SDL_GetVersion(&sdlver);
- 
+
  override=0;
  while (-1!=(e=getopt(argc, argv, "8")))
  {
@@ -598,13 +598,13 @@ int main (int argc, char **argv)
 
  /* Only used for the white noise generator; a good RNG isn't necessary. */
  srand(time(0));
- 
+
  /*
   * Get SDL2 up and running.
-  * 
+  *
   * First, initalize the library.  Then create our window, renderer, blit
   * surface, and allocate memory for our offscreen buffer.
-  * 
+  *
   * If any of this fails, die screaming.
   */
  if (SDL_Init(SDL_INIT_EVERYTHING))
@@ -612,8 +612,8 @@ int main (int argc, char **argv)
   fprintf (stderr, "FATAL: Could not start SDL\n");
   return 2;
  }
- 
- screen=SDL_CreateWindow("Marduk", SDL_WINDOWPOS_UNDEFINED, 
+
+ screen=SDL_CreateWindow("Marduk", SDL_WINDOWPOS_UNDEFINED,
                          SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
  if (!screen)
  {
@@ -626,7 +626,7 @@ int main (int argc, char **argv)
   fprintf (stderr, "FATAL: Could not set up renderer\n");
   return 2;
  }
- texture=SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, 
+ texture=SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
                            SDL_TEXTUREACCESS_STREAMING, 640, 480);
  if (!texture)
  {
@@ -639,10 +639,10 @@ int main (int argc, char **argv)
   fprintf (stderr, "FATAL: Not enough memory for offscreen buffer\n");
   return 2;
  }
- 
+
  /*
   * Set up the VDP emulation.
-  * 
+  *
   * If it fails, die screaming.
   */
  vdp=vrEmuTms9918New();
@@ -652,10 +652,10 @@ int main (int argc, char **argv)
   return 3;
  }
  vrEmuTms9918Reset(vdp);
- 
+
  /*
   * Set up the PSG emulation.
-  * 
+  *
   * If it fails, die screaming.
   */
  psg=PSG_new(1789772, 44100);
@@ -666,28 +666,28 @@ int main (int argc, char **argv)
  }
  PSG_setVolumeMode(psg, 2);
  PSG_reset(psg);
- 
+
  /*
-  * Load the ROM, then set it visible. 
-  * 
+  * Load the ROM, then set it visible.
+  *
   * The first thing the ROM does is initialize the control register, which
   * will flick off the lights and unset TV mode - we intentionally set them on
   * as the initial status.
   */
  if (init_rom(override)) return 1;
  ctrlreg=0x3A;
- 
+
  printf ("ROM size: %u KB\n", romsize>>10);
  printf ("Emulation ready to start\n");
- 
+
  /*
   * Get ready to start the emulated Z80.
-  * 
+  *
   * Timings are for a 3.58 (ish) MHz CPU on an NTSC signal.  This is natural
   * because Canada uses the same video standards as the United States.
   */
  init_cpu();
- 
+
  death_flag=scanline=0;
  clock_gettime(CLOCK_REALTIME, &timespec);
  next_fire=timespec.tv_nsec+FIRE_TICK;
@@ -703,7 +703,7 @@ int main (int argc, char **argv)
    if (scanline>261)
    {
     scanline=0;
-    
+
     SDL_UpdateTexture(texture, 0, display, 640*sizeof(uint32_t));
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, 0, 0);
@@ -713,13 +713,13 @@ int main (int argc, char **argv)
   }
   z80_step(&cpu);
  }
- 
+
  /* Clean up and exit properly. */
  printf ("Shutting down emulation\n");
  PSG_delete(psg);
  vrEmuTms9918Destroy(vdp);
  free(display);
  SDL_Quit();
- 
+
  return 0;
 }
