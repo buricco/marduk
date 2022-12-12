@@ -47,7 +47,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.04"
+#define VERSION "0.05"
 
 /*
  * Forward declaration.
@@ -88,6 +88,9 @@ unsigned long next;
 
 /* Set to nonzero to tell the emulator to exit. */
 int death_flag;
+
+/* To kick the dog */
+unsigned next_watchdog;
 
 /*
  * SDL2 structure pointers.
@@ -691,12 +694,20 @@ int main (int argc, char **argv)
  death_flag=scanline=0;
  clock_gettime(CLOCK_REALTIME, &timespec);
  next_fire=timespec.tv_nsec+FIRE_TICK;
+ next_watchdog=0;
 
  while (!death_flag)
  {
   if (cpu.cyc>next)
   {
    every_scanline();
+   
+   /* ready to kick the dog? */
+   if (!next_key)
+   {
+    next_watchdog++;
+    if (next_watchdog>=58000) next_key=0x94;
+   }
    scanline++;
    if (scanline<240)
     render_scanline(scanline);
