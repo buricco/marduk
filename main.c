@@ -47,12 +47,22 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.03"
+#define VERSION "0.04"
 
 /*
  * Forward declaration.
  */
 static void reinit_cpu (void);
+
+/*
+ * Speed control.
+ * 
+ * Not exact, but it helps keep the speed more or less even based on how long
+ * it takes to run one scanline's worth of code.
+ */
+#define FIRE_TICK 63492
+unsigned long long next_fire;
+struct timespec timespec;
 
 /*
  * The NABU has 64K RAM.
@@ -206,6 +216,13 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
 void every_scanline (void)
 {
  SDL_Event event;
+ struct timespec n;
+
+ clock_gettime(CLOCK_REALTIME, &timespec);
+ n.tv_sec=0;
+ n.tv_nsec=next_fire-timespec.tv_nsec;
+ next_fire=timespec.tv_nsec+FIRE_TICK;
+ if (next_fire>n.tv_nsec) nanosleep(&n, 0);
 
  while (SDL_PollEvent(&event))
  {
@@ -354,6 +371,8 @@ void every_scanline (void)
      /* F3 - reset */
      case SDLK_F3:
       printf ("Reset pressed\n");
+      clock_gettime(CLOCK_REALTIME, &timespec);
+      next_fire=timespec.tv_nsec+FIRE_TICK;
       reinit_cpu();
       break;
      /* Alt-F4 - exit */
@@ -670,6 +689,9 @@ int main (int argc, char **argv)
  init_cpu();
  
  death_flag=scanline=0;
+ clock_gettime(CLOCK_REALTIME, &timespec);
+ next_fire=timespec.tv_nsec+FIRE_TICK;
+
  while (!death_flag)
  {
   if (cpu.cyc>next)
