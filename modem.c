@@ -23,7 +23,24 @@
 #include <stdio.h>
 
 /*
- * Dummy functions
+ * This will probably have to repeat DJ Sures' reverse-engineering of the Nabu
+ * cable modem, since as of present that is only available in the form of a
+ * .NET binary.
+ * 
+ * The architecture of this file is intended to allow for at least some degree
+ * of portability, such that the specific calls to the TCP stack can be
+ * abstracted, since of our target operating systems, while most use the BSD
+ * socket API as-is, one uses a modified version (Winsock) and thus needs to
+ * be accomodated with #ifdefs.
+ * 
+ * Anything in C involving the Internet is a pain in the kiester.
+ */
+
+/*
+ * Dummy functions.
+ * 
+ * modem_read is called when the core requests an IN from port 0x80.
+ * modem_write is called when the core requests an OUT to port 0x80.
  */
 uint8_t modem_read (void)
 {
@@ -35,4 +52,22 @@ void modem_write (uint8_t data)
 {
  printf ("Write 0x%02X to modem port\n", data);
  return;
+}
+
+/*
+ * Set up the emulation (currently a stub that returns fail).
+ * 
+ * Initialize the TCP stack, if necessary, and prepare the connection to the
+ * virtual head-end server.
+ */
+int modem_init (void)
+{
+ return -1;
+}
+
+/*
+ * Clean up and shut down the emulation (currently a stub).
+ */
+void modem_deinit (void)
+{
 }

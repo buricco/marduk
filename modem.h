@@ -24,6 +24,9 @@
 
 #include <stdint.h>
 
+int modem_init (void);
+void modem_deinit (void);
+
 uint8_t modem_read (void);
 void modem_write (uint8_t);
 

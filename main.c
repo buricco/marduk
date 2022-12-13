@@ -50,7 +50,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.07"
+#define VERSION "0.08"
 
 /*
  * Forward declaration.
@@ -85,6 +85,8 @@ VrEmuTms9918 *vdp;
 PSG *psg;
 int ctrlreg;
 int next_key;
+
+int gotmodem;
 
 /* Next cycle for scanline loop. */
 unsigned long next;
@@ -185,7 +187,7 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
 
    return 0;
   case 0x80:
-   return modem_read();
+   return gotmodem?modem_read():0;
   case 0x90: /* Not sure if this is the right action */
    t=next_key;
    next_key=0;
@@ -218,7 +220,7 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
 
    return;
   case 0x80:
-   modem_write(val);
+   if (gotmodem) modem_write(val);
    return;
   case 0xA0:
    vrEmuTms9918WriteData(vdp, val);
@@ -711,15 +713,29 @@ int main (int argc, char **argv)
 
  /*
   * Load the ROM, then set it visible.
-  *
+  */
+ if (init_rom(override)) return 1;
+ printf ("ROM size: %u KB\n", romsize>>10);
+ 
+ /*
+  * Set up the modem.
+  * 
+  * modem_init() returns 0=success, -1=failure, but our internal flag needs
+  * 1=success, 0=failure so use ! to quickly make that change.
+  */
+ e=modem_init();
+ if (e)
+ {
+  fprintf (stderr, "Modem will not be available.\n");
+ }
+ gotmodem=!e;
+
+ /*
   * The first thing the ROM does is initialize the control register, which
   * will flick off the lights and unset TV mode - we intentionally set them on
   * as the initial status.
-  */
- if (init_rom(override)) return 1;
+  */ 
  ctrlreg=0x3A;
-
- printf ("ROM size: %u KB\n", romsize>>10);
  printf ("Emulation ready to start\n");
 
  /*
@@ -768,6 +784,7 @@ int main (int argc, char **argv)
 
  /* Clean up and exit properly. */
  printf ("Shutting down emulation\n");
+ if (gotmodem) modem_deinit();
  PSG_delete(psg);
  vrEmuTms9918Destroy(vdp);
  free(display);
