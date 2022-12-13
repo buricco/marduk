@@ -44,10 +44,13 @@
 #include "emu2149.h"
 #include "z80.h"
 
+/* Cable modem include */
+#include "modem.h"
+
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.06"
+#define VERSION "0.07"
 
 /*
  * Forward declaration.
@@ -181,6 +184,8 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
   case 0x41: /* PSG addr? */
 
    return 0;
+  case 0x80:
+   return modem_read();
   case 0x90: /* Not sure if this is the right action */
    t=next_key;
    next_key=0;
@@ -211,6 +216,9 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
    return;
   case 0x41: /* PSG addr? */
 
+   return;
+  case 0x80:
+   modem_write(val);
    return;
   case 0xA0:
    vrEmuTms9918WriteData(vdp, val);

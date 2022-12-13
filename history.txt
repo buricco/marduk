@@ -1,3 +1,25 @@
+0.07 (22121222)
+===============
+
+  * Stub for modem emulation
+
+0.06 (22121220)
+===============
+
+  * More code cleanup
+  * Additional keyboard code
+
+0.05 (22121209)
+===============
+
+  * Code cleanup
+  * Keyboard bugfix
+
+0.04 (22121119)
+===============
+
+  * Speed throttling
+
 0.03 (22120613)
 ===============
 

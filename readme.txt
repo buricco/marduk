@@ -45,8 +45,8 @@ Status
   Console lights - Tested, working.
   Keyboard - Partially implemented; not working.
   Joysticks - No attempt to implement these yet.
-  Cable modem - No attempt to implement this yet.
-  Strict speed control - No attempt to implement this yet.
+  Cable modem - Stubs only.
+  Strict speed control - Tested (mostly with another emulator), working.
 
 Key bindings
 ============
