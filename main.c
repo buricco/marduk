@@ -47,7 +47,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.05"
+#define VERSION "0.06"
 
 /*
  * Forward declaration.
@@ -112,6 +112,13 @@ uint32_t *display;
  * much easier to interface a full 64K of RAM to a Z80, where double-banking
  * is absolutely necessary to do that on a 6502 (witness the double Dxxx on an
  * Apple ][).
+ * 
+ * Emulation of basic memory reads and writes is mindlessly simple; if the ROM
+ * is banked in, it overrides reads from RAM - otherwise operate on RAM.  The
+ * entire memory map is otherwise filled with RAM.
+ * 
+ * What the following functions do should be self-evident.  The void pointers
+ * are unused but required by the CPU core.
  */
 
 uint8_t mem_read (void *blob, uint16_t addr)
@@ -125,6 +132,14 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
 {
  RAM[addr]=val;
 }
+
+/*
+ * Emulation of port I/O is a lot more complicated, and handled by the
+ * following two functions.
+ * 
+ * As with the above, the CPU core passes an unnecessary (but potentially
+ * useful on other architectures) pointer to the CPU struct; it is not used.
+ */
 
 /*
  * 00 - control register (write)
@@ -190,9 +205,6 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
  {
   case 0x00:
    ctrlreg=val;
-#ifdef PORT_DEBUG
-   printf ("Control register set to 0x%02X\n", val);
-#endif
    return;
   case 0x40: /* PSG data? */
 
@@ -395,6 +407,11 @@ void every_scanline (void)
  }
 }
 
+/*
+ * Exactly what it says on the tin.
+ * 
+ * Call the TMS9918 emulator to generate the next scanline into the offscreen.
+ */
 void render_scanline (int line)
 {
  int x;
@@ -453,7 +470,8 @@ void render_scanline (int line)
   * Draw the LEDs.
   *
   * They will appear in the bottom right corner, in the order in which
-  * they appear on the system unit.
+  * they appear on the system unit.  The current code generates a sort of
+  * rounded or "chewed-out" rectangle.  Not efficient code.
   */
  if ((line>=232)&&(line<236))
  {
@@ -497,6 +515,19 @@ void render_scanline (int line)
 }
 
 /*
+ * End of frame.  Blit it out.
+ * 
+ * Also for anything that needs done every 1/60 second.
+ */
+void next_frame (void)
+{
+ SDL_UpdateTexture(texture, 0, display, 640*sizeof(uint32_t));
+ SDL_RenderClear(renderer);
+ SDL_RenderCopy(renderer, texture, 0, 0);
+ SDL_RenderPresent(renderer);
+}
+
+/*
  * Set up the CPU emulation.
  *
  * Initialize the function pointers and call the CPU emulator's init code.
@@ -512,6 +543,9 @@ static void init_cpu (void)
  next_key=0x95;
 }
 
+/*
+ * Reset the CPU emulation.
+ */
 static void reinit_cpu (void)
 {
  void *tmp;
@@ -523,9 +557,6 @@ static void reinit_cpu (void)
 
 /*
  * Open ROM.
- *
- * Currently only the 4K version is supported; it will be trivial to also add
- * support for the 8K version.
  */
 static int init_rom (int override)
 {
@@ -706,19 +737,21 @@ int main (int argc, char **argv)
    if (!next_key)
    {
     next_watchdog++;
-    if (next_watchdog>=58000) next_key=0x94;
+    if (next_watchdog>=58000)
+    {
+     printf ("Keyboard: kicking the dog\n");
+     next_key=0x94;
+    }
    }
+   else next_watchdog=0;
    scanline++;
    if (scanline<240)
     render_scanline(scanline);
    if (scanline>261)
    {
     scanline=0;
-
-    SDL_UpdateTexture(texture, 0, display, 640*sizeof(uint32_t));
-    SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, texture, 0, 0);
-    SDL_RenderPresent(renderer);
+    
+    next_frame();
    }
    next+=228;
   }
