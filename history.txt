@@ -1,3 +1,8 @@
+0.09 (22121503)
+===============
+
+  * Allow user-specified ROM filename (for the 5 new versions of the BIOS)
+
 0.08 (22121310)
 ===============
 

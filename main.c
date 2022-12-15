@@ -50,7 +50,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.08"
+#define VERSION "0.09"
 
 /*
  * Forward declaration.
@@ -568,20 +568,16 @@ static void reinit_cpu (void)
 /*
  * Open ROM.
  */
-static int init_rom (int override)
+static int init_rom (char *filename)
 {
  int e;
  FILE *file;
 
- file=override?0:fopen(ROMFILE1, "rb");
+ file=fopen(filename, "rb");
  if (!file)
  {
-  file=fopen(ROMFILE2, "rb");
-  if (!file)
-  {
-   fprintf (stderr, "FATAL: Failed to open ROM file\n");
-   return 1;
-  }
+  fprintf (stderr, "FATAL: Failed to open ROM file\n");
+  return 1;
  }
  fseek(file, 0, SEEK_END);
  romsize=ftell(file);
@@ -608,23 +604,29 @@ int main (int argc, char **argv)
 {
  int e;
 
- int override;
+ char *bios;
 
  SDL_version sdlver;
  int scanline;
 
  SDL_GetVersion(&sdlver);
-
- override=0;
- while (-1!=(e=getopt(argc, argv, "8")))
+ 
+ bios=ROMFILE1;
+ while (-1!=(e=getopt(argc, argv, "48B:")))
  {
   switch (e)
   {
+   case '4':
+    bios=ROMFILE1;
+    break;
    case '8':
-    override=1;
+    bios=ROMFILE2;
+    break;
+   case 'B':
+    bios=optarg;
     break;
    default:
-    fprintf (stderr, "usage: %s [-8]\n", argv[0]);
+    fprintf (stderr, "usage: %s [-4 | 8 | -B filename]\n", argv[0]);
     return 1;
   }
  }
@@ -714,7 +716,7 @@ int main (int argc, char **argv)
  /*
   * Load the ROM, then set it visible.
   */
- if (init_rom(override)) return 1;
+ if (init_rom(bios)) return 1;
  printf ("ROM size: %u KB\n", romsize>>10);
  
  /*
