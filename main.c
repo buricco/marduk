@@ -50,7 +50,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.09a"
+#define VERSION "0.10"
 
 /*
  * Forward declaration.

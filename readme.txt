@@ -70,15 +70,3 @@ License
   than that though.
 
   (Note that SDL uses a different license, but with the same goals.)
-
-Uh...
-=====
-
-  Yeah.
-
-  I know my inclusion of the system firmware is technically a violation of
-  copyright, but with the company long-defunct and the fact that this program
-  is mainly intended as a revival of a dead platform, it is included for the
-  sake of preservation.
-
-  (For WWW-browsable source releases, this file is not included.)

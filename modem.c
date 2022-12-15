@@ -21,53 +21,105 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <sys/socket.h>
+#include <sys/times.h>
+#include <sys/types.h>
+#include <netdb.h>
 
 /*
- * This will probably have to repeat DJ Sures' reverse-engineering of the Nabu
- * cable modem, since as of present that is only available in the form of a
- * .NET binary.
+ * Version of modem.c to interface with DJ Sures' emulator.
  * 
- * The architecture of this file is intended to allow for at least some degree
- * of portability, such that the specific calls to the TCP stack can be
- * abstracted, since of our target operating systems, while most use the BSD
- * socket API as-is, one uses a modified version (Winsock) and thus needs to
- * be accomodated with #ifdefs.
- * 
- * Anything in C involving the Internet is a pain in the kiester.
+ * This is intended as a temporary solution until the emulator is 
+ * reimplemented within Marduk itself.
  */
 
-/*
- * Dummy functions.
- * 
- * modem_read is called when the core requests an IN from port 0x80.
- * modem_write is called when the core requests an OUT to port 0x80.
- */
+static int status;
+static int mosock;
+
 uint8_t modem_read (void)
 {
- printf ("Read from modem port\n");
- return 0;
+ struct timeval timeval;
+ fd_set fds;
+ int e;
+ uint8_t t;
+ 
+ if (!status) return 0;
+ 
+ timeval.tv_sec=0;
+ timeval.tv_usec=100;
+ 
+ FD_ZERO(&fds);
+ FD_SET(mosock, &fds);
+ 
+ e=select(mosock+1, &fds, 0, 0, &timeval);
+ if (e==-1)
+ {
+  perror("select()");
+  return 0;
+ }
+ 
+ if (!e) /* Data on 0 sockets */
+ {
+  return 0;
+ }
+ 
+ recv(mosock, &t, 1, 0);
+ return t;
 }
 
 void modem_write (uint8_t data)
 {
- printf ("Write 0x%02X to modem port\n", data);
+ if (status) send(mosock, &data, 1, 0);
  return;
 }
 
-/*
- * Set up the emulation (currently a stub that returns fail).
- * 
- * Initialize the TCP stack, if necessary, and prepare the connection to the
- * virtual head-end server.
- */
 int modem_init (void)
 {
- return -1;
+ int e;
+ 
+ status=0;
+ 
+ struct addrinfo hints, *result;
+
+ memset(&hints,0,sizeof(struct addrinfo));
+ hints.ai_family=AF_INET;
+ hints.ai_socktype=SOCK_STREAM;
+ hints.ai_flags=(AI_NUMERICHOST | AI_NUMERICSERV);
+ hints.ai_protocol=IPPROTO_TCP;
+ e=getaddrinfo("127.0.0.1", "5816", &hints, &result);
+ if (e)
+ {
+  fprintf (stderr, "Modem init failed: %s\n", gai_strerror(e));
+  return -1;
+ }
+ 
+ mosock=socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+ if (mosock<0)
+ {
+  perror ("Could not get a socket");
+  freeaddrinfo(result);
+  return -1;
+ }
+ 
+ e=connect(mosock, result->ai_addr, result->ai_addrlen);
+ freeaddrinfo(result);
+ if (e==-1)
+ {
+  perror ("Connection to virtual modem failed");
+  return -1;
+ }
+ printf ("Connection to virtual modem succeeded\n");
+ status=1;
+ 
+ return 0;
 }
 
-/*
- * Clean up and shut down the emulation (currently a stub).
- */
 void modem_deinit (void)
 {
+ if (!status) return;
+ printf ("Shutting down virtual modem.\n");
+ close(mosock);
 }

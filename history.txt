@@ -1,3 +1,9 @@
+0.10 (22121515)
+===============
+
+  * Beginning of code to support the "official" modem emulator, until our own
+    is ready
+
 0.09a (22121504)
 ================
 
