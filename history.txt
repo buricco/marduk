@@ -1,3 +1,8 @@
+0.09a (22121504)
+================
+
+  * Small bugfix to keyboard watchdog (released only to git)
+
 0.09 (22121503)
 ===============
 

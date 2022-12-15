@@ -50,7 +50,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.09"
+#define VERSION "0.09a"
 
 /*
  * Forward declaration.
@@ -765,6 +765,7 @@ int main (int argc, char **argv)
     next_watchdog++;
     if (next_watchdog>=58000)
     {
+     next_watchdog=0;
      printf ("Keyboard: kicking the dog\n");
      next_key=0x94;
     }
