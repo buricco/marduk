@@ -150,6 +150,8 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
  * 00 - control register (write)
  * 40 - AY-8910 data port
  * 41 - AY-8910 latch (?)
+ *      The PSG ports are BACKWARD from other systems!  Or at least from the 
+ *      MSX and the Arcade Board.
  * 80 - cable modem
  * 90 - keyboard (mostly ASCII)
  * 91 - keyboard strobe (also written to, not sure what for yet)
