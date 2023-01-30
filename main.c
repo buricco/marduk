@@ -176,17 +176,22 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
  *   Nabu_Computer_Technical_Manual_by_MJP-compressed.pdf
  */
 
+uint8_t tmp_psg_address = 0x00;
+
 uint8_t port_read (z80 *mycpu, uint8_t port)
 {
  uint8_t t;
 
  switch (port)
  {
-  case 0x40: /* PSG data? */
-
-   return 0;
-  case 0x41: /* PSG addr? */
-
+  case 0x40: /* read register from PSG */
+   t = PSG_readReg(psg, tmp_psg_address);
+   printf("PSG read %02X from %02X\r\n", t, tmp_psg_address);
+   return t; 
+  case 0x41:
+   /* manual assert, WIP */
+   printf("WTF read from 0x41\r\n");
+   exit(-1);
    return 0;
   case 0x80:
    return gotmodem?modem_read():0;
@@ -215,11 +220,27 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
   case 0x00:
    ctrlreg=val;
    return;
-  case 0x40: /* PSG data? */
-
+  case 0x40: /* write data to PSG */
+   printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
+   PSG_writeReg(psg, tmp_psg_address, val);
    return;
-  case 0x41: /* PSG addr? */
-
+  case 0x41: /* write address to PSG */
+   tmp_psg_address = val;
+   if (val == 0x07) {
+    printf("PSG ADDR - IO PORT SETTINGS and others...\r\n");
+   }
+   else if (val == 0x0E) {
+    printf("PSG ADDR - PORT A\r\n");
+   }
+   else if (val == 0x0F) {
+    printf("PSG ADDR - PORT B\r\n");
+   }
+   /* manual assert for the moment, WIP */
+   if (val > 0x1f) {
+    printf("WTF PSG address write > 0x1f\r\n");
+    exit(-1);
+   }
+   //printf("PORT WRITE 0x%02X = 0x%02X\r\n", port, val);
    return;
   case 0x80:
    if (gotmodem) modem_write(val);
