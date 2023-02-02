@@ -265,6 +265,8 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
    printf("KEYBOARD DATA READ\r\n");
    t=next_key;
    next_key=0;
+   keybdint = 0;
+   update_interrupts();
    if (t==255) return 0; else return t;
   case 0x91: /* Not sure if this is the right action */
   printf("KEYBOARD STATUS READ\r\n");
@@ -289,7 +291,7 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
    ctrlreg=val;
    return;
   case 0x40: /* write data to PSG */
-   //printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
+   printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
    if (tmp_psg_address == 0x0E) {
     if (psg_porta != val) {
       psg_porta = val;
@@ -301,16 +303,16 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
   case 0x41: /* write address to PSG */
    tmp_psg_address = val;
    if (val == 0x07) {
-    //printf("PSG ADDR - IO PORT SETTINGS and others...\r\n");
+    printf("PSG ADDR - IO PORT SETTINGS and others...\r\n");
    }
    else if (val == 0x0E) {
-    //printf("PSG ADDR - PORT A\r\n");
+    printf("PSG ADDR - PORT A\r\n");
    }
    else if (val == 0x0F) {
-    //printf("PSG ADDR - PORT B\r\n");
+    printf("PSG ADDR - PORT B\r\n");
    }
    else {
-    //printf("PSG ADDR %02X\r\n", val);
+    printf("PSG ADDR %02X\r\n", val);
    }
    /* manual assert for the moment, WIP */
    if (val > 0x1f) {
@@ -357,6 +359,7 @@ void every_scanline (void)
     * "Break key" codes for arrows.
     */
    case SDL_KEYUP:
+    keybdint = 1;
     update_interrupts();
     switch (event.key.keysym.sym)
     {
@@ -398,7 +401,8 @@ void every_scanline (void)
      static char *shiftnums=")!@#$%^&*(";
      SDL_Keymod m;
      int k;
-
+     keybdint = 1;
+     update_interrupts();
      /*
       * "Make key" codes for arrows.
       */
