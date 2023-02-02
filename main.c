@@ -329,14 +329,14 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
     }
    }
    if (tmp_psg_address == 0x07) {
-    printf("PSG IO PORT SETTINGS: %02X\r\n", val);
+    //printf("PSG IO PORT SETTINGS: %02X\r\n", val);
    }
    PSG_writeReg(psg, tmp_psg_address, val);
    return;
   case 0x41: /* write address to PSG */
    tmp_psg_address = val;
    if (val == 0x07) {
-    printf("PSG ADDR - IO PORT SETTINGS and others...\r\n");
+    //printf("PSG ADDR - IO PORT SETTINGS and others...\r\n");
    }
    else if (val == 0x0E) {
     //printf("PSG ADDR - PORT A\r\n");
@@ -689,6 +689,8 @@ static void init_cpu (void)
  cpu.port_out = port_write;
  next=228;
  next_key=0x95;
+ keybdint = 1;
+ update_interrupts();
 }
 
 /*
@@ -850,7 +852,6 @@ int main (int argc, char **argv)
  }
  PSG_setVolumeMode(psg, 2);
  PSG_reset(psg);
- psg->reg[15] = 0xf0;
 
  /*
   * Load the ROM, then set it visible.
@@ -912,6 +913,8 @@ int main (int argc, char **argv)
      next_watchdog=0;
      printf ("Keyboard: kicking the dog\n");
      next_key=0x94;
+     keybdint = 1;
+     update_interrupts();
     }
    }
    else next_watchdog=0;
