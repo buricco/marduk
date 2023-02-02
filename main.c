@@ -300,18 +300,36 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
 
 void port_write (z80 *mycpu, uint8_t port, uint8_t val)
 {
+ uint8_t psg_reg7;
  switch (port)
  {
   case 0x00:
    ctrlreg=val;
    return;
   case 0x40: /* write data to PSG */
+   psg_reg7 = PSG_readReg(psg, 7);
+   //printf("psg_reg7 = %02X\r\n", psg_reg7);
    //printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
    if (tmp_psg_address == 0x0E) {
+    if (!(psg_reg7 & 0x40)) {
+      printf("WTF writing to an INPUT configured PORTA, NABU NAUGHTY\r\n");
+      printf("psg_reg7 = %02X\r\n", psg_reg7);
+      return;
+    }
     if (psg_porta != val) {
       psg_porta = val;
       update_interrupts();
     }
+   }
+   if (tmp_psg_address == 0x0F) {
+    if (!(psg_reg7 & 0x80)) {
+      printf("WTF writing to an INPUT configured PORTB, NABU NAUGHTY\r\n");
+      printf("psg_reg7 = %02X\r\n", psg_reg7);
+      return;
+    }
+   }
+   if (tmp_psg_address == 0x07) {
+    printf("PSG IO PORT SETTINGS: %02X\r\n", val);
    }
    PSG_writeReg(psg, tmp_psg_address, val);
    return;
