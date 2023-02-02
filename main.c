@@ -246,7 +246,7 @@ void update_interrupts()
   }
   int int_prio = ~(interrupts & psg_porta);
   int GS, Q0, Q1, Q2, EO;
-  int_prio_enc_alt(0, interrupts, &GS, &Q0, &Q1, &Q2, &EO);
+  int_prio_enc_alt(0, int_prio, &GS, &Q0, &Q1, &Q2, &EO);
   psg_portb &= 0xf0;
   psg_portb |= EO | (Q0 << 1) | (Q1 << 2) | (Q2 << 3);
   PSG_writeReg(psg, 15, psg_portb);
@@ -284,7 +284,7 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
    update_interrupts();
    if (t==255) return 0; else return t;
   case 0x91: /* Not sure if this is the right action */
-  printf("KEYBOARD STATUS READ\r\n");
+   printf("KEYBOARD STATUS READ\r\n");
    return next_key?0xFF:0x00;
   case 0xA0:
    return vrEmuTms9918ReadData(vdp);
@@ -306,7 +306,7 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
    ctrlreg=val;
    return;
   case 0x40: /* write data to PSG */
-   printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
+   //printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
    if (tmp_psg_address == 0x0E) {
     if (psg_porta != val) {
       psg_porta = val;
