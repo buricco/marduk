@@ -228,10 +228,22 @@ uint8_t hccarint = 0;
 uint8_t hccatint = 0;
 uint8_t keybdint = 0;
 uint8_t vdpint = 0;
-uint8_t interrupts = 0x40;
+uint8_t interrupts = 0x00;
 
 void update_interrupts()
 {
+  if (keybdint) {
+    interrupts |= 0x20;
+  }
+  else {
+    interrupts &= ~0x20;
+  }
+  if (vdpint) {
+    interrupts |= 0x10;
+  }
+  else {
+    interrupts &= ~0x10;
+  }
   int int_prio = ~(interrupts & psg_porta);
   int GS, Q0, Q1, Q2, EO;
   int_prio_enc_alt(0, interrupts, &GS, &Q0, &Q1, &Q2, &EO);
@@ -239,7 +251,8 @@ void update_interrupts()
   psg_portb |= EO | (Q0 << 1) | (Q1 << 2) | (Q2 << 3);
   PSG_writeReg(psg, 15, psg_portb);
   if (!GS) {
-    printf("Z80 INTERRUPT\r\n");
+    printf("Z80 INTERRUPT, psg_portb: %02X, psg_porta: %02X, interrupts: %02X\r\n", 
+    psg_portb, psg_porta, interrupts);
     z80_gen_int(&cpu, (Q0 << 5) | (Q1 << 6) | (Q2 << 7));
   }
 }
@@ -293,7 +306,7 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
    ctrlreg=val;
    return;
   case 0x40: /* write data to PSG */
-   //printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
+   printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
    if (tmp_psg_address == 0x0E) {
     if (psg_porta != val) {
       psg_porta = val;
@@ -305,7 +318,7 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
   case 0x41: /* write address to PSG */
    tmp_psg_address = val;
    if (val == 0x07) {
-    //printf("PSG ADDR - IO PORT SETTINGS and others...\r\n");
+    printf("PSG ADDR - IO PORT SETTINGS and others...\r\n");
    }
    else if (val == 0x0E) {
     //printf("PSG ADDR - PORT A\r\n");
