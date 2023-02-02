@@ -176,6 +176,71 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
  *   Nabu_Computer_Technical_Manual_by_MJP-compressed.pdf
  */
 
+void int_prio_enc(int EI, int I0, int I1, int I2, int I3, int I4, int I5, int I6, int I7,
+    int *GS, int *Q0, int *Q1, int *Q2, int *EO)
+{
+  /* most often and default values, ease the typing later on ;) */
+  *GS = 0;
+  *EO = 1;
+  *Q0 = *Q1 = *Q2 = 0;
+  /* external input is high, case (a) */
+  if (EI == 1) { *GS = 1; *Q0 = 1; *Q1 = 1; *Q2 = 1;}
+  /* external input is low, inputs 0-7 are high, case (b) */
+  else if (I0 & I1 & I2 & I3 & I4 & I5 & I6 & I7) {
+      *GS = *Q0 = *Q1 = *Q2 = 1; *EO = 0;
+  }
+  /* I7 is low, case (c) */
+  else if (!I7) { /* nop */ }
+  /* I6 is low, case (d) */
+  else if (!I6) { *Q0 = 1; }
+  /* I5 is low, case (e) */
+  else if (!I5) { *Q1 = 1; }
+  /* I4 is low, case (f) */
+  else if (!I4) { *Q0 = *Q1 = 1; }
+  /* I3 is low, case (g) */
+  else if (!I3) { *Q2 = 1; }
+  /* I2 is low, case (h) */
+  else if (!I2) { *Q0 = *Q2 = 1; }
+  /* I1 is low, case (i) */
+  else if (!I1) { *Q1 = *Q2 = 1; }
+  /* I0 is low (no other choice), case (j) */
+  else { *Q0 = *Q1 = *Q2; }
+}
+
+void int_prio_enc_alt(int EI, int interrupts, int *GS, int *Q0,
+  int *Q1, int *Q2, int *EO)
+{
+  int_prio_enc(EI, interrupts & 0x01, (interrupts & 0x02) >> 1,
+    (interrupts & 0x04) >> 2, (interrupts & 0x08) >> 3,
+    (interrupts & 0x10) >> 4, (interrupts & 0x20) >> 5,
+    (interrupts & 0x40) >> 6, (interrupts & 0x80) >> 7,
+    GS, Q0, Q1, Q2, EO);
+}
+
+/* fed into PSG's PORTB via PSG_writeReg,
+ since NABU never writes to PORTB, this should be safe */
+uint8_t psg_portb = 0;
+
+/* keep the current PSG's PORTA in this scope */
+uint8_t psg_porta = 0;
+
+uint8_t hccarint = 0;
+uint8_t hccatint = 0;
+uint8_t keybdint = 0;
+uint8_t vdpint = 0;
+uint8_t interrupts = 0x40;
+
+void update_interrupts()
+{
+  int int_prio = ~(interrupts & psg_porta);
+  int GS, Q0, Q1, Q2, EO;
+  int_prio_enc_alt(0, interrupts, &GS, &Q0, &Q1, &Q2, &EO);
+  psg_portb &= 0xf0;
+  psg_portb |= EO | (Q0 << 1) | (Q1 << 2) | (Q2 << 3);
+  PSG_writeReg(psg, 15, psg_portb);
+  z80_gen_int(&cpu, !GS);
+}
+
 uint8_t tmp_psg_address = 0x00;
 
 uint8_t port_read (z80 *mycpu, uint8_t port)
@@ -186,7 +251,8 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
  {
   case 0x40: /* read register from PSG */
    t = PSG_readReg(psg, tmp_psg_address);
-   printf("PSG read %02X from %02X\r\n", t, tmp_psg_address);
+   //t = 0x60;
+   //printf("PSG read %02X from %02X\r\n", t, tmp_psg_address);
    return t; 
   case 0x41:
    /* manual assert, WIP */
@@ -196,10 +262,12 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
   case 0x80:
    return gotmodem?modem_read():0;
   case 0x90: /* Not sure if this is the right action */
+   printf("KEYBOARD DATA READ\r\n");
    t=next_key;
    next_key=0;
    if (t==255) return 0; else return t;
   case 0x91: /* Not sure if this is the right action */
+  printf("KEYBOARD STATUS READ\r\n");
    return next_key?0xFF:0x00;
   case 0xA0:
    return vrEmuTms9918ReadData(vdp);
@@ -221,19 +289,28 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
    ctrlreg=val;
    return;
   case 0x40: /* write data to PSG */
-   printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
+   //printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
+   if (tmp_psg_address == 0x0E) {
+    if (psg_porta != val) {
+      psg_porta = val;
+      update_interrupts();
+    }
+   }
    PSG_writeReg(psg, tmp_psg_address, val);
    return;
   case 0x41: /* write address to PSG */
    tmp_psg_address = val;
    if (val == 0x07) {
-    printf("PSG ADDR - IO PORT SETTINGS and others...\r\n");
+    //printf("PSG ADDR - IO PORT SETTINGS and others...\r\n");
    }
    else if (val == 0x0E) {
-    printf("PSG ADDR - PORT A\r\n");
+    //printf("PSG ADDR - PORT A\r\n");
    }
    else if (val == 0x0F) {
-    printf("PSG ADDR - PORT B\r\n");
+    //printf("PSG ADDR - PORT B\r\n");
+   }
+   else {
+    //printf("PSG ADDR %02X\r\n", val);
    }
    /* manual assert for the moment, WIP */
    if (val > 0x1f) {
@@ -280,6 +357,7 @@ void every_scanline (void)
     * "Break key" codes for arrows.
     */
    case SDL_KEYUP:
+    update_interrupts();
     switch (event.key.keysym.sym)
     {
      case SDLK_UP:
@@ -735,6 +813,7 @@ int main (int argc, char **argv)
  }
  PSG_setVolumeMode(psg, 2);
  PSG_reset(psg);
+ psg->reg[15] = 0xf0;
 
  /*
   * Load the ROM, then set it visible.
@@ -776,6 +855,11 @@ int main (int argc, char **argv)
  next_fire=timespec.tv_nsec+FIRE_TICK;
  next_watchdog=0;
 
+ /*
+  volatile for the moment, we don't use it, but want to call PSG_calc()
+ */
+ volatile uint16_t sound_sample = 0;
+
  while (!death_flag)
  {
   if (cpu.cyc>next)
@@ -805,6 +889,7 @@ int main (int argc, char **argv)
    }
    next+=228;
   }
+  sound_sample = PSG_calc(psg);
   z80_step(&cpu);
  }
 
