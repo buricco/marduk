@@ -251,8 +251,7 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
  {
   case 0x40: /* read register from PSG */
    t = PSG_readReg(psg, tmp_psg_address);
-   //t = 0x60;
-   //printf("PSG read %02X from %02X\r\n", t, tmp_psg_address);
+   printf("PSG read %02X from %02X\r\n", t, tmp_psg_address);
    return t; 
   case 0x41:
    /* manual assert, WIP */
