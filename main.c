@@ -232,6 +232,18 @@ uint8_t interrupts = 0x00;
 
 void update_interrupts()
 {
+  if (hccarint) {
+    interrupts |= 0x80;
+  }
+  else {
+    interrupts &= ~0x80;
+  }
+  if (hccatint) {
+    interrupts |= 0x40;
+  }
+  else {
+    interrupts &= ~0x40;
+  }
   if (keybdint) {
     interrupts |= 0x20;
   }
