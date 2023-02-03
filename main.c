@@ -183,27 +183,17 @@ void int_prio_enc(int EI, int I0, int I1, int I2, int I3, int I4, int I5, int I6
   *GS = 0;
   *EO = 1;
   *Q0 = *Q1 = *Q2 = 0;
-  /* external input is high, case (a) */
   if (EI == 1) { *GS = 1; *Q0 = 1; *Q1 = 1; *Q2 = 1;}
-  /* external input is low, inputs 0-7 are high, case (b) */
   else if (I0 & I1 & I2 & I3 & I4 & I5 & I6 & I7) {
       *GS = *Q0 = *Q1 = *Q2 = 1; *EO = 0;
   }
-  /* I7 is low, case (c) */
   else if (!I7) { /* nop */ }
-  /* I6 is low, case (d) */
   else if (!I6) { *Q0 = 1; }
-  /* I5 is low, case (e) */
   else if (!I5) { *Q1 = 1; }
-  /* I4 is low, case (f) */
   else if (!I4) { *Q0 = *Q1 = 1; }
-  /* I3 is low, case (g) */
   else if (!I3) { *Q2 = 1; }
-  /* I2 is low, case (h) */
   else if (!I2) { *Q0 = *Q2 = 1; }
-  /* I1 is low, case (i) */
   else if (!I1) { *Q1 = *Q2 = 1; }
-  /* I0 is low (no other choice), case (j) */
   else { *Q0 = *Q1 = *Q2; }
 }
 
@@ -225,10 +215,10 @@ uint8_t psg_portb = 0;
 uint8_t psg_porta = 0;
 
 uint8_t hccarint = 0;
-uint8_t hccatint = 0;
+uint8_t hccatint = 1;
 uint8_t keybdint = 0;
 uint8_t vdpint = 0;
-uint8_t interrupts = 0x00;
+uint8_t interrupts = 0;
 
 void update_interrupts()
 {
@@ -263,8 +253,8 @@ void update_interrupts()
   psg_portb |= EO | (Q0 << 1) | (Q1 << 2) | (Q2 << 3);
   PSG_writeReg(psg, 15, psg_portb);
   if (!GS) {
-    printf("Z80 INTERRUPT, psg_portb: %02X, psg_porta: %02X, interrupts: %02X\r\n", 
-    psg_portb, psg_porta, interrupts);
+    //printf("Z80 INTERRUPT, psg_portb: %02X, psg_porta: %02X, interrupts: %02X\r\n", 
+    //psg_portb, psg_porta, interrupts);
     z80_gen_int(&cpu, (Q0 << 5) | (Q1 << 6) | (Q2 << 7));
   }
 }
@@ -337,6 +327,9 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
       printf("WTF writing to an INPUT configured PORTA, NABU NAUGHTY\r\n");
       printf("psg_reg7 = %02X\r\n", psg_reg7);
       return;
+    }
+    if (val & 0x40) {
+      //printf("WHOA WHOA WE WANT TX FREE INTERRUPT :O\r\n");
     }
     if (psg_porta != val) {
       psg_porta = val;
@@ -915,80 +908,7 @@ int main (int argc, char **argv)
   * because Canada uses the same video standards as the United States.
   */
  init_cpu();
-
-/*
-printf("writing 0x83\r\n");
-modem_write(0x83);
-sleep(1);
-while(modem_bytes_available()) {
-  uint8_t xx;
-  modem_read(&xx);
-  printf("%02X ", xx);
-}
-printf("\r\n");
-//
-printf("writing 0x82\r\n");
-modem_write(0x82);
-sleep(1);
-while(modem_bytes_available()) {
-  uint8_t xx;
-  modem_read(&xx);
-  printf("%02X ", xx);
-}
-printf("\r\n");
-//
-printf("writing 0x01\r\n");
-modem_write(0x01);
-sleep(1);
-while(modem_bytes_available()) {
-  uint8_t xx;
-  modem_read(&xx);
-  printf("%02X ", xx);
-}
-printf("\r\n");
-//
-printf("writing 0x81\r\n");
-modem_write(0x81);
-sleep(1);
-while(modem_bytes_available()) {
-  uint8_t xx;
-  modem_read(&xx);
-  printf("%02X ", xx);
-}
-printf("\r\n");
-//
-printf("writing 0x8F\r\n");
-modem_write(0x8f);
-sleep(1);
-while(modem_bytes_available()) {
-  uint8_t xx;
-  modem_read(&xx);
-  printf("%02X ", xx);
-}
-printf("\r\n");
-//
-printf("writing 0x05\r\n");
-modem_write(0x05);
-sleep(1);
-while(modem_bytes_available()) {
-  uint8_t xx;
-  modem_read(&xx);
-  printf("%02X ", xx);
-}
-printf("\r\n");
-//
-printf("writing 0x84\r\n");
-modem_write(0x84);
-sleep(1);
-while(modem_bytes_available()) {
-  uint8_t xx;
-  modem_read(&xx);
-  printf("%02X ", xx);
-}
-
-printf("\r\n");
-exit(0);
-*/
+ update_interrupts();
 
  death_flag=scanline=0;
  clock_gettime(CLOCK_REALTIME, &timespec);
