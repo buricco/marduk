@@ -1,7 +1,8 @@
 Copyright for Z80 emulation:      Copyright (c) 2019 Nicolas Allemand.
 Copyright for TMS9918 emulation:  Copyright (c) 2021, 2022 Troy Schrapel.
 Copyright for AY-8910 emulation:  Copyright (c) 2001-2022 Mitsutaka Okazaki.
-Copyright for Nabu emulation:     Copyright 2022 S. V. Nickolas.
+Copyright for Nabu emulation:     Copyright 2022, 2023 S. V. Nickolas.
+                                  Copyright 2023 Marcin Wołoszczuk.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

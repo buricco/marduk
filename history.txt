@@ -1,3 +1,9 @@
+0.20 (23020319)
+===============
+
+  * Fixes to pass the initial diagnostics
+  * Actually boots with the official modem emulator
+
 0.10 (22121515)
 ===============
 

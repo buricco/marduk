@@ -1,5 +1,6 @@
 /*
- * Copyright 2022 S. V. Nickolas.
+ * Copyright 2022, 2023 S. V. Nickolas.
+ * Copyright 2023 Marcin Wołoszczuk.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
