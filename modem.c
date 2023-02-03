@@ -39,17 +39,16 @@
 static int status;
 static int mosock;
 
-uint8_t modem_read (void)
+uint8_t modem_bytes_available()
 {
  struct timeval timeval;
  fd_set fds;
  int e;
- uint8_t t;
  
  if (!status) return 0;
  
  timeval.tv_sec=0;
- timeval.tv_usec=100;
+ timeval.tv_usec=0;
  
  FD_ZERO(&fds);
  FD_SET(mosock, &fds);
@@ -65,9 +64,17 @@ uint8_t modem_read (void)
  {
   return 0;
  }
- 
- recv(mosock, &t, 1, 0);
- return t;
+ return 1;    
+}
+
+uint8_t modem_read (uint8_t *b)
+{
+ if (!status) return 0;
+ if (modem_bytes_available()) {
+   recv(mosock, b, 1, 0);
+   return 1;
+ }
+ return 0;
 }
 
 void modem_write (uint8_t data)

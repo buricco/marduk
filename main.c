@@ -176,23 +176,121 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
  *   Nabu_Computer_Technical_Manual_by_MJP-compressed.pdf
  */
 
+/* priority encoder */
+void int_prio_enc(int EI, int I0, int I1, int I2, int I3, int I4, int I5, int I6, int I7,
+    int *GS, int *Q0, int *Q1, int *Q2, int *EO)
+{
+  /* most often and default values, ease the typing later on ;) */
+  *GS = 0;
+  *EO = 1;
+  *Q0 = *Q1 = *Q2 = 0;
+  if (EI == 1) { *GS = 1; *Q0 = 1; *Q1 = 1; *Q2 = 1;}
+  else if (I0 & I1 & I2 & I3 & I4 & I5 & I6 & I7) {
+      *GS = *Q0 = *Q1 = *Q2 = 1; *EO = 0;
+  }
+  else if (!I7) { /* nop */ }
+  else if (!I6) { *Q0 = 1; }
+  else if (!I5) { *Q1 = 1; }
+  else if (!I4) { *Q0 = *Q1 = 1; }
+  else if (!I3) { *Q2 = 1; }
+  else if (!I2) { *Q0 = *Q2 = 1; }
+  else if (!I1) { *Q1 = *Q2 = 1; }
+  else { *Q0 = *Q1 = *Q2; }
+}
+
+/* basically a macro to accept an interrupt vector instead of single bits */
+void int_prio_enc_alt(int EI, int interrupts, int *GS, int *Q0,
+  int *Q1, int *Q2, int *EO)
+{
+  int_prio_enc(EI, interrupts & 0x01, (interrupts & 0x02) >> 1,
+    (interrupts & 0x04) >> 2, (interrupts & 0x08) >> 3,
+    (interrupts & 0x10) >> 4, (interrupts & 0x20) >> 5,
+    (interrupts & 0x40) >> 6, (interrupts & 0x80) >> 7,
+    GS, Q0, Q1, Q2, EO);
+}
+
+/* fed into PSG's PORTB via PSG_writeReg,
+ since NABU never writes to PORTB, this should be safe */
+uint8_t psg_portb = 0;
+
+/* keep the current PSG's PORTA in this scope */
+uint8_t psg_porta = 0;
+
+/* interrupt variables */
+uint8_t hccarint = 0;
+uint8_t hccatint = 0;
+uint8_t keybdint = 0;
+uint8_t vdpint = 0;
+uint8_t interrupts = 0;
+
+void update_interrupts()
+{
+  if (hccarint) {
+    interrupts |= 0x80;
+  }
+  else {
+    interrupts &= ~0x80;
+  }
+  if (hccatint) {
+    interrupts |= 0x40;
+  }
+  else {
+    interrupts &= ~0x40;
+  }
+  if (keybdint) {
+    interrupts |= 0x20;
+  }
+  else {
+    interrupts &= ~0x20;
+  }
+  if (vdpint) {
+    interrupts |= 0x10;
+  }
+  else {
+    interrupts &= ~0x10;
+  }
+  int int_prio = ~(interrupts & psg_porta);
+  int GS, Q0, Q1, Q2, EO;
+  int_prio_enc_alt(0, int_prio, &GS, &Q0, &Q1, &Q2, &EO);
+  psg_portb &= 0xf0;
+  psg_portb |= EO | (Q0 << 1) | (Q1 << 2) | (Q2 << 3);
+  PSG_writeReg(psg, 15, psg_portb);
+  if (!GS) {
+    z80_gen_int(&cpu, (Q0 << 5) | (Q1 << 6) | (Q2 << 7));
+  }
+}
+
+/* used for latching PSG's register address */
+uint8_t psg_reg_address = 0x00;
+
 uint8_t port_read (z80 *mycpu, uint8_t port)
 {
- uint8_t t;
+ uint8_t t, b;
 
  switch (port)
  {
-  case 0x40: /* PSG data? */
-
-   return 0;
-  case 0x41: /* PSG addr? */
-
+  case 0x40: /* read register from PSG */
+   t = PSG_readReg(psg, psg_reg_address);
+   return t; 
+  case 0x41:
+   printf("IO read from 0x41, this shouldn't happen, exiting!\r\n");
+   exit(-1);
    return 0;
   case 0x80:
-   return gotmodem?modem_read():0;
+   if (gotmodem) {
+    t = modem_read(&b);
+    if (t) {
+      hccarint = 0;
+      update_interrupts();
+      return b;
+    }
+   }
+   return 0;
   case 0x90: /* Not sure if this is the right action */
    t=next_key;
    next_key=0;
+   keybdint = 0;
+   update_interrupts();
    if (t==255) return 0; else return t;
   case 0x91: /* Not sure if this is the right action */
    return next_key?0xFF:0x00;
@@ -210,19 +308,45 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
 
 void port_write (z80 *mycpu, uint8_t port, uint8_t val)
 {
+ uint8_t psg_reg7;
  switch (port)
  {
   case 0x00:
    ctrlreg=val;
    return;
-  case 0x40: /* PSG data? */
-
+  case 0x40: /* write data to PSG */
+   psg_reg7 = PSG_readReg(psg, 7);
+   if (psg_reg_address == 0x0E) {
+    if (!(psg_reg7 & 0x40)) {
+      printf("Writing to PORTA when it's set to input, DENIED!\r\n");
+      printf("psg_reg7 = %02X\r\n", psg_reg7);
+      return;
+    }
+    if (psg_porta != val) {
+      psg_porta = val;
+      update_interrupts();
+    }
+   }
+   if (psg_reg_address == 0x0F) {
+    if (!(psg_reg7 & 0x80)) {
+      printf("Writing to PORTB when it's set to input, DENIED!\r\n");
+      printf("psg_reg7 = %02X\r\n", psg_reg7);
+      return;
+    }
+   }
+   PSG_writeReg(psg, psg_reg_address, val);
    return;
-  case 0x41: /* PSG addr? */
-
+  case 0x41: /* write address to PSG */
+   if (val > 0x1f) {
+    printf("PSG reg address > 0x1f when writing, exiting!\r\n");
+    exit(-1);
+   }
+   psg_reg_address = val;
    return;
   case 0x80:
-   if (gotmodem) modem_write(val);
+   if (gotmodem) {
+    modem_write(val);
+   }
    return;
   case 0xA0:
    vrEmuTms9918WriteData(vdp, val);
@@ -259,6 +383,8 @@ void every_scanline (void)
     * "Break key" codes for arrows.
     */
    case SDL_KEYUP:
+    keybdint = 1;
+    update_interrupts();
     switch (event.key.keysym.sym)
     {
      case SDLK_UP:
@@ -299,7 +425,8 @@ void every_scanline (void)
      static char *shiftnums=")!@#$%^&*(";
      SDL_Keymod m;
      int k;
-
+     keybdint = 1;
+     update_interrupts();
      /*
       * "Make key" codes for arrows.
       */
@@ -547,12 +674,26 @@ void next_frame (void)
 static void init_cpu (void)
 {
  z80_init (&cpu);
+
  cpu.read_byte = mem_read;
  cpu.write_byte = mem_write;
  cpu.port_in = port_read;
  cpu.port_out = port_write;
+
  next=228;
  next_key=0x95;
+
+ psg_portb = 0;
+ psg_porta = 0;
+ hccarint = 0;
+ vdpint = 0;
+ interrupts = 0;
+ /* we fire the keyboard interrupt, to make the CPU read the 0x95 code */
+ keybdint = 1;
+ /* we are keeping the TX BUFFER EMPTY always high since this is an emu env */
+ hccatint = 1;
+ /* fire the above interrupts */
+ update_interrupts();
 }
 
 /*
@@ -755,10 +896,22 @@ int main (int argc, char **argv)
  next_fire=timespec.tv_nsec+FIRE_TICK;
  next_watchdog=0;
 
+ /*
+  volatile for the moment, we don't use it, but want to call PSG_calc()
+ */
+ volatile uint16_t sound_sample = 0;
+
  while (!death_flag)
  {
   if (cpu.cyc>next)
   {
+   /* if there are bytes available in the modem,
+    generate the buffer ready interrupt */
+   if(modem_bytes_available()) {
+    hccarint = 1;
+    update_interrupts();
+   }
+
    every_scanline();
    
    /* ready to kick the dog? */
@@ -770,6 +923,8 @@ int main (int argc, char **argv)
      next_watchdog=0;
      printf ("Keyboard: kicking the dog\n");
      next_key=0x94;
+     keybdint = 1;
+     update_interrupts();
     }
    }
    else next_watchdog=0;
@@ -784,6 +939,9 @@ int main (int argc, char **argv)
    }
    next+=228;
   }
+  /* calculate the PSG output sample
+  TODO: integrate this with SDL audio */
+  sound_sample = PSG_calc(psg);
   z80_step(&cpu);
  }
 
@@ -796,4 +954,4 @@ int main (int argc, char **argv)
  SDL_Quit();
 
  return 0;
-}
+} 
