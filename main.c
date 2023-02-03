@@ -176,6 +176,7 @@ void mem_write (void *blob, uint16_t addr, uint8_t val)
  *   Nabu_Computer_Technical_Manual_by_MJP-compressed.pdf
  */
 
+/* priority encoder */
 void int_prio_enc(int EI, int I0, int I1, int I2, int I3, int I4, int I5, int I6, int I7,
     int *GS, int *Q0, int *Q1, int *Q2, int *EO)
 {
@@ -197,6 +198,7 @@ void int_prio_enc(int EI, int I0, int I1, int I2, int I3, int I4, int I5, int I6
   else { *Q0 = *Q1 = *Q2; }
 }
 
+/* basically a macro to accept an interrupt vector instead of single bits */
 void int_prio_enc_alt(int EI, int interrupts, int *GS, int *Q0,
   int *Q1, int *Q2, int *EO)
 {
@@ -214,8 +216,9 @@ uint8_t psg_portb = 0;
 /* keep the current PSG's PORTA in this scope */
 uint8_t psg_porta = 0;
 
+/* interrupt variables */
 uint8_t hccarint = 0;
-uint8_t hccatint = 1;
+uint8_t hccatint = 0;
 uint8_t keybdint = 0;
 uint8_t vdpint = 0;
 uint8_t interrupts = 0;
@@ -253,13 +256,12 @@ void update_interrupts()
   psg_portb |= EO | (Q0 << 1) | (Q1 << 2) | (Q2 << 3);
   PSG_writeReg(psg, 15, psg_portb);
   if (!GS) {
-    //printf("Z80 INTERRUPT, psg_portb: %02X, psg_porta: %02X, interrupts: %02X\r\n", 
-    //psg_portb, psg_porta, interrupts);
     z80_gen_int(&cpu, (Q0 << 5) | (Q1 << 6) | (Q2 << 7));
   }
 }
 
-uint8_t tmp_psg_address = 0x00;
+/* used for latching PSG's register address */
+uint8_t psg_reg_address = 0x00;
 
 uint8_t port_read (z80 *mycpu, uint8_t port)
 {
@@ -268,20 +270,16 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
  switch (port)
  {
   case 0x40: /* read register from PSG */
-   t = PSG_readReg(psg, tmp_psg_address);
-   //printf("PSG read %02X from %02X\r\n", t, tmp_psg_address);
+   t = PSG_readReg(psg, psg_reg_address);
    return t; 
   case 0x41:
-   /* manual assert, WIP */
-   //printf("WTF read from 0x41\r\n");
+   printf("IO read from 0x41, this shouldn't happen, exiting!\r\n");
    exit(-1);
    return 0;
   case 0x80:
-   printf("ADAPTER READ\r\n");
    if (gotmodem) {
     t = modem_read(&b);
     if (t) {
-      printf("MODEM READ: 0x%02X\r\n", b);
       hccarint = 0;
       update_interrupts();
       return b;
@@ -289,14 +287,12 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
    }
    return 0;
   case 0x90: /* Not sure if this is the right action */
-   //printf("KEYBOARD DATA READ\r\n");
    t=next_key;
    next_key=0;
    keybdint = 0;
    update_interrupts();
    if (t==255) return 0; else return t;
   case 0x91: /* Not sure if this is the right action */
-   //printf("KEYBOARD STATUS READ\r\n");
    return next_key?0xFF:0x00;
   case 0xA0:
    return vrEmuTms9918ReadData(vdp);
@@ -320,57 +316,34 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
    return;
   case 0x40: /* write data to PSG */
    psg_reg7 = PSG_readReg(psg, 7);
-   //printf("psg_reg7 = %02X\r\n", psg_reg7);
-   //printf("PSG writing %02X to %02X\r\n", val, tmp_psg_address);
-   if (tmp_psg_address == 0x0E) {
+   if (psg_reg_address == 0x0E) {
     if (!(psg_reg7 & 0x40)) {
-      printf("WTF writing to an INPUT configured PORTA, NABU NAUGHTY\r\n");
+      printf("Writing to PORTA when it's set to input, DENIED!\r\n");
       printf("psg_reg7 = %02X\r\n", psg_reg7);
       return;
-    }
-    if (val & 0x40) {
-      //printf("WHOA WHOA WE WANT TX FREE INTERRUPT :O\r\n");
     }
     if (psg_porta != val) {
       psg_porta = val;
       update_interrupts();
     }
    }
-   if (tmp_psg_address == 0x0F) {
+   if (psg_reg_address == 0x0F) {
     if (!(psg_reg7 & 0x80)) {
-      printf("WTF writing to an INPUT configured PORTB, NABU NAUGHTY\r\n");
+      printf("Writing to PORTB when it's set to input, DENIED!\r\n");
       printf("psg_reg7 = %02X\r\n", psg_reg7);
       return;
     }
    }
-   if (tmp_psg_address == 0x07) {
-    //printf("PSG IO PORT SETTINGS: %02X\r\n", val);
-   }
-   PSG_writeReg(psg, tmp_psg_address, val);
+   PSG_writeReg(psg, psg_reg_address, val);
    return;
   case 0x41: /* write address to PSG */
-   tmp_psg_address = val;
-   if (val == 0x07) {
-    //printf("PSG ADDR - IO PORT SETTINGS and others...\r\n");
-   }
-   else if (val == 0x0E) {
-    //printf("PSG ADDR - PORT A\r\n");
-   }
-   else if (val == 0x0F) {
-    //printf("PSG ADDR - PORT B\r\n");
-   }
-   else {
-    //printf("PSG ADDR %02X\r\n", val);
-   }
-   /* manual assert for the moment, WIP */
    if (val > 0x1f) {
-    printf("WTF PSG address write > 0x1f\r\n");
+    printf("PSG reg address > 0x1f when writing, exiting!\r\n");
     exit(-1);
    }
-   //printf("PORT WRITE 0x%02X = 0x%02X\r\n", port, val);
+   psg_reg_address = val;
    return;
   case 0x80:
-   printf("MODEM WRITE 0x%02X\r\n", val);
    if (gotmodem) {
     modem_write(val);
    }
@@ -564,9 +537,6 @@ void every_scanline (void)
      case SDLK_F10:
       death_flag=1;
       break;
-     case SDLK_F1:
-     printf("bytes available: %d\r\n", modem_bytes_available());
-     break;
     }
     break;
    case SDL_QUIT:
@@ -704,13 +674,25 @@ void next_frame (void)
 static void init_cpu (void)
 {
  z80_init (&cpu);
+
  cpu.read_byte = mem_read;
  cpu.write_byte = mem_write;
  cpu.port_in = port_read;
  cpu.port_out = port_write;
+
  next=228;
  next_key=0x95;
+
+ psg_portb = 0;
+ psg_porta = 0;
+ hccarint = 0;
+ vdpint = 0;
+ interrupts = 0;
+ /* we fire the keyboard interrupt, to make the CPU read the 0x95 code */
  keybdint = 1;
+ /* we are keeping the TX BUFFER EMPTY always high since this is an emu env */
+ hccatint = 1;
+ /* fire the above interrupts */
  update_interrupts();
 }
 
@@ -908,7 +890,6 @@ int main (int argc, char **argv)
   * because Canada uses the same video standards as the United States.
   */
  init_cpu();
- update_interrupts();
 
  death_flag=scanline=0;
  clock_gettime(CLOCK_REALTIME, &timespec);
@@ -924,10 +905,13 @@ int main (int argc, char **argv)
  {
   if (cpu.cyc>next)
   {
+   /* if there are bytes available in the modem,
+    generate the buffer ready interrupt */
    if(modem_bytes_available()) {
     hccarint = 1;
     update_interrupts();
    }
+
    every_scanline();
    
    /* ready to kick the dog? */
@@ -955,6 +939,8 @@ int main (int argc, char **argv)
    }
    next+=228;
   }
+  /* calculate the PSG output sample
+  TODO: integrate this with SDL audio */
   sound_sample = PSG_calc(psg);
   z80_step(&cpu);
  }
