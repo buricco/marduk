@@ -916,6 +916,80 @@ int main (int argc, char **argv)
   */
  init_cpu();
 
+/*
+printf("writing 0x83\r\n");
+modem_write(0x83);
+sleep(1);
+while(modem_bytes_available()) {
+  uint8_t xx;
+  modem_read(&xx);
+  printf("%02X ", xx);
+}
+printf("\r\n");
+//
+printf("writing 0x82\r\n");
+modem_write(0x82);
+sleep(1);
+while(modem_bytes_available()) {
+  uint8_t xx;
+  modem_read(&xx);
+  printf("%02X ", xx);
+}
+printf("\r\n");
+//
+printf("writing 0x01\r\n");
+modem_write(0x01);
+sleep(1);
+while(modem_bytes_available()) {
+  uint8_t xx;
+  modem_read(&xx);
+  printf("%02X ", xx);
+}
+printf("\r\n");
+//
+printf("writing 0x81\r\n");
+modem_write(0x81);
+sleep(1);
+while(modem_bytes_available()) {
+  uint8_t xx;
+  modem_read(&xx);
+  printf("%02X ", xx);
+}
+printf("\r\n");
+//
+printf("writing 0x8F\r\n");
+modem_write(0x8f);
+sleep(1);
+while(modem_bytes_available()) {
+  uint8_t xx;
+  modem_read(&xx);
+  printf("%02X ", xx);
+}
+printf("\r\n");
+//
+printf("writing 0x05\r\n");
+modem_write(0x05);
+sleep(1);
+while(modem_bytes_available()) {
+  uint8_t xx;
+  modem_read(&xx);
+  printf("%02X ", xx);
+}
+printf("\r\n");
+//
+printf("writing 0x84\r\n");
+modem_write(0x84);
+sleep(1);
+while(modem_bytes_available()) {
+  uint8_t xx;
+  modem_read(&xx);
+  printf("%02X ", xx);
+}
+
+printf("\r\n");
+exit(0);
+*/
+
  death_flag=scanline=0;
  clock_gettime(CLOCK_REALTIME, &timespec);
  next_fire=timespec.tv_nsec+FIRE_TICK;
