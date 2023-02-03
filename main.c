@@ -273,7 +273,7 @@ uint8_t tmp_psg_address = 0x00;
 
 uint8_t port_read (z80 *mycpu, uint8_t port)
 {
- uint8_t t;
+ uint8_t t, b;
 
  switch (port)
  {
@@ -283,20 +283,30 @@ uint8_t port_read (z80 *mycpu, uint8_t port)
    return t; 
   case 0x41:
    /* manual assert, WIP */
-   printf("WTF read from 0x41\r\n");
+   //printf("WTF read from 0x41\r\n");
    exit(-1);
    return 0;
   case 0x80:
-   return gotmodem?modem_read():0;
+   printf("ADAPTER READ\r\n");
+   if (gotmodem) {
+    t = modem_read(&b);
+    if (t) {
+      printf("MODEM READ: 0x%02X\r\n", b);
+      hccarint = 0;
+      update_interrupts();
+      return b;
+    }
+   }
+   return 0;
   case 0x90: /* Not sure if this is the right action */
-   printf("KEYBOARD DATA READ\r\n");
+   //printf("KEYBOARD DATA READ\r\n");
    t=next_key;
    next_key=0;
    keybdint = 0;
    update_interrupts();
    if (t==255) return 0; else return t;
   case 0x91: /* Not sure if this is the right action */
-   printf("KEYBOARD STATUS READ\r\n");
+   //printf("KEYBOARD STATUS READ\r\n");
    return next_key?0xFF:0x00;
   case 0xA0:
    return vrEmuTms9918ReadData(vdp);
@@ -367,7 +377,10 @@ void port_write (z80 *mycpu, uint8_t port, uint8_t val)
    //printf("PORT WRITE 0x%02X = 0x%02X\r\n", port, val);
    return;
   case 0x80:
-   if (gotmodem) modem_write(val);
+   printf("MODEM WRITE 0x%02X\r\n", val);
+   if (gotmodem) {
+    modem_write(val);
+   }
    return;
   case 0xA0:
    vrEmuTms9918WriteData(vdp, val);
@@ -558,6 +571,9 @@ void every_scanline (void)
      case SDLK_F10:
       death_flag=1;
       break;
+     case SDLK_F1:
+     printf("bytes available: %d\r\n", modem_bytes_available());
+     break;
     }
     break;
    case SDL_QUIT:
@@ -914,6 +930,10 @@ int main (int argc, char **argv)
  {
   if (cpu.cyc>next)
   {
+   if(modem_bytes_available()) {
+    hccarint = 1;
+    update_interrupts();
+   }
    every_scanline();
    
    /* ready to kick the dog? */
