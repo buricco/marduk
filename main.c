@@ -116,6 +116,8 @@ SDL_AudioSpec audio_spec;
 
 uint32_t *display;
 
+int psg_calc_flag = 0;
+
 /*
  * Emulation of the NABU memory map.
  *
@@ -375,7 +377,7 @@ uint8_t port_read(z80 *mycpu, uint8_t port)
     return 0;
   case 0x90: /* Not sure if this is the right action */
     t = keyboard_buffer_get();
-    //printf("KEYBOARD returned 0x%02X\r\n", t);
+    // printf("KEYBOARD returned 0x%02X\r\n", t);
     keybdint = 0;
     update_interrupts();
     if (t == 255)
@@ -388,7 +390,7 @@ uint8_t port_read(z80 *mycpu, uint8_t port)
     return vrEmuTms9918ReadData(vdp);
   case 0xA1: /* Not sure if this is the right action */
     b = vrEmuTms9918ReadStatus(vdp);
-    //printf("VDP STATUS: 0x%02X\r\n", b);
+    // printf("VDP STATUS: 0x%02X\r\n", b);
     vdpint = 0;
     update_interrupts();
     return b;
@@ -420,7 +422,7 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
       }
       if (val & 0x10)
       {
-        //printf("Bro, we want VDPINT for real, psg_reg7: 0x%02X, interrupts: 0x%02X\r\n", psg_reg7, interrupts);
+        // printf("Bro, we want VDPINT for real, psg_reg7: 0x%02X, interrupts: 0x%02X\r\n", psg_reg7, interrupts);
       }
       if (psg_porta != val)
       {
@@ -620,6 +622,10 @@ void keyboard_poll()
       case SDLK_END:
         keyboard_buffer_put(0xEA);
         break;
+        
+      case SDLK_BACKSPACE:
+       keyboard_buffer_put(0x7F);
+       break;
       }
       if (event.key.keysym.sym < 128)
       {
@@ -1076,9 +1082,9 @@ int main(int argc, char **argv)
   /* audio stuff */
   SDL_zero(audio_spec);
   audio_spec.freq = 44100;
-  audio_spec.format = AUDIO_S16SYS;
+  audio_spec.format = AUDIO_S16LSB;
   audio_spec.channels = 1;
-  audio_spec.samples = 1;
+  audio_spec.samples = 1024;
   audio_spec.callback = NULL;
 
   audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, NULL, 0);
@@ -1151,6 +1157,7 @@ int main(int argc, char **argv)
   next_fire = timespec.tv_nsec + FIRE_TICK;
   next_watchdog = 0;
   keyjoy = joybyte = 0;
+  int i;
 
   uint16_t sound_sample = 0;
 
@@ -1170,7 +1177,7 @@ int main(int argc, char **argv)
       {
         keybdint = 1;
         update_interrupts();
-        //printf("KEYBOARD: int! %d %d\r\n", keyboard_buffer_read_ptr, keyboard_buffer_write_ptr);
+        // printf("KEYBOARD: int! %d %d\r\n", keyboard_buffer_read_ptr, keyboard_buffer_write_ptr);
       }
 
       every_scanline();
@@ -1195,6 +1202,10 @@ int main(int argc, char **argv)
       {
         scanline = 0;
 
+        for (i = 0; i < (44100 / 60); i++) {
+          sound_sample = PSG_calc(psg);
+          SDL_QueueAudio(audio_device, &sound_sample, 2);
+        }
         next_frame();
 
         if (vrEmuTms9918RegValue(vdp, TMS_REG_1) & 0x20)
@@ -1203,15 +1214,12 @@ int main(int argc, char **argv)
           {
             vdpint = 1;
             update_interrupts();
-            //printf("vdpint!\r\n");
+            // printf("vdpint!\r\n");
           }
         }
       }
       next += 228;
-      sound_sample = PSG_calc(psg);
-      SDL_QueueAudio(audio_device, &sound_sample, 2);
     }
-
     z80_step(&cpu);
   }
 
