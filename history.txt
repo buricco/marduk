@@ -1,3 +1,9 @@
+0.21 (23021208)
+===============
+
+  * Keyboard support reworked
+  * F5/F6 to switch between full keyboard or joystick mode
+
 0.20 (23020319)
 ===============
 
