@@ -51,7 +51,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.21b"
+#define VERSION "0.22"
 
 /*
  * Forward declaration.
@@ -111,6 +111,8 @@ uint8_t joybyte;
 SDL_Window *screen;
 SDL_Renderer *renderer;
 SDL_Texture *texture;
+SDL_AudioDeviceID audio_device;
+SDL_AudioSpec audio_spec;
 
 uint32_t *display;
 
@@ -327,7 +329,8 @@ void keyboard_buffer_put(uint8_t code)
 
 int keyboard_buffer_empty()
 {
-  if (keyboard_buffer_read_ptr == keyboard_buffer_write_ptr) {
+  if (keyboard_buffer_read_ptr == keyboard_buffer_write_ptr) 
+  {
     return 1;
   }
   return 0;
@@ -335,7 +338,8 @@ int keyboard_buffer_empty()
 
 uint8_t keyboard_buffer_get()
 {
-  if (keyboard_buffer_read_ptr != keyboard_buffer_write_ptr) {
+  if (keyboard_buffer_read_ptr != keyboard_buffer_write_ptr) 
+  {
     return keyboard_buffer[keyboard_buffer_read_ptr++];
   }
   return 255;
@@ -1069,6 +1073,16 @@ int main(int argc, char **argv)
     return 2;
   }
 
+  /* audio stuff */
+  SDL_zero(audio_spec);
+  audio_spec.freq = 44100;
+  audio_spec.format = AUDIO_S16SYS;
+  audio_spec.channels = 1;
+  audio_spec.samples = 1;
+  audio_spec.callback = NULL;
+
+  audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, NULL, 0);
+  SDL_PauseAudioDevice(audio_device, 0);
   /*
    * Set up the VDP emulation.
    *
@@ -1152,7 +1166,8 @@ int main(int argc, char **argv)
         update_interrupts();
       }
 
-      if (!keyboard_buffer_empty() && !keybdint) {
+      if (!keyboard_buffer_empty() && !keybdint) 
+      {
         keybdint = 1;
         update_interrupts();
         //printf("KEYBOARD: int! %d %d\r\n", keyboard_buffer_read_ptr, keyboard_buffer_write_ptr);
@@ -1193,20 +1208,10 @@ int main(int argc, char **argv)
         }
       }
       next += 228;
+      sound_sample = PSG_calc(psg);
+      SDL_QueueAudio(audio_device, &sound_sample, 2);
     }
-    /* calculate the PSG output sample
-    TODO: integrate this with SDL audio */
-    sound_sample = PSG_calc(psg);
-    if (vrEmuTms9918ReadStatus(vdp) & 0x80)
-    {
-      // printf("%02X\r\n", vrEmuTms9918RegValue(vdp, TMS_REG_1));
-      // printf("%02d\r\n", scanline);
-      // if (vrEmuTms9918RegValue(vdp, TMS_REG_1) & 0x20) {
-      // vdpint = 1;
-      // update_interrupts();
-      // printf("vdpint!\r\n");
-      //}
-    }
+
     z80_step(&cpu);
   }
 
