@@ -51,7 +51,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.21a"
+#define VERSION "0.21b"
 
 /*
  * Forward declaration.
@@ -524,10 +524,10 @@ void keyboard_poll()
         else
          keyboard_buffer_put(0xF0);
         break;
-      case SDLK_HOME: /* « */
+      case SDLK_PAGEUP: /* « */
         keyboard_buffer_put(0xF5);
         break;
-      case SDLK_END: /* » */
+      case SDLK_PAGEDOWN: /* » */
         keyboard_buffer_put(0xF4);
         break;
       case SDLK_INSERT: /* YES */
@@ -539,7 +539,7 @@ void keyboard_poll()
       case SDLK_PAUSE:
         keyboard_buffer_put(0xF9);
         break;
-      case SDLK_PAGEDOWN:
+      case SDLK_END:
         keyboard_buffer_put(0xFA);
         break;
       }
@@ -598,10 +598,10 @@ void keyboard_poll()
         else
          keyboard_buffer_put(0xE0);
         break;
-      case SDLK_HOME: /* « */
+      case SDLK_PAGEUP: /* « */
         keyboard_buffer_put(0xE5);
         break;
-      case SDLK_END: /* » */
+      case SDLK_PAGEDOWN: /* » */
         keyboard_buffer_put(0xE4);
         break;
       case SDLK_INSERT: /* YES */
@@ -613,7 +613,7 @@ void keyboard_poll()
       case SDLK_PAUSE:
         keyboard_buffer_put(0xE9);
         break;
-      case SDLK_PAGEDOWN:
+      case SDLK_END:
         keyboard_buffer_put(0xEA);
         break;
       }

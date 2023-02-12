@@ -58,8 +58,7 @@ Key bindings
   F6 = Arrows and space route to the P1 joystick.
   F10 = Exit
   Ins and Del = Yes and No
-  Home and End = << and >>
-    (this needs to be revised...)
+  PgUp and PgDn = << and >>
 
   Everything else should be obvious.
 

@@ -1,3 +1,9 @@
+0.21b (23021212)
+================
+
+  * Swapped Home/End with PgUp/PgDn, because it makes more sense with the
+    NabuNet menu system.
+
 0.21a (23021211)
 ================
 
