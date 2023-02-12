@@ -43,9 +43,9 @@ Status
   PSG - Initial code to interface to the core.
         Not hooked up to anything yet.
   Console lights - Tested, working.
-  Keyboard - Partially implemented; not working.
-  Joysticks - No attempt to implement these yet.
-  Cable modem - Stubs only.
+  Keyboard - Tested, working.
+  Joystick - Implemented through keyboard; see below.
+  Cable modem - Working, more or less.
   Strict speed control - Tested (mostly with another emulator), working.
 
 Key bindings
@@ -54,9 +54,12 @@ Key bindings
   Note: The keyboard interface code does not appear to be correct.
 
   F3 = Reset
+  F5 = Arrows and space route to the keyboard.
+  F6 = Arrows and space route to the P1 joystick.
   F10 = Exit
   Ins and Del = Yes and No
   Home and End = << and >>
+    (this needs to be revised...)
 
   Everything else should be obvious.
 

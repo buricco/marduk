@@ -51,11 +51,12 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.21"
+#define VERSION "0.21a"
 
 /*
  * Forward declaration.
  */
+static void reinit_cpu(void);
 static void reinit_cpu(void);
 
 /*
@@ -516,7 +517,7 @@ void keyboard_poll()
       case SDLK_RIGHT:
         if (keyjoy)
         {
-         joybyte &= 0xFC;
+         joybyte &= 0xFB;
          keyboard_buffer_put(0x80);
          keyboard_buffer_put(joybyte|0xA0);
         }
