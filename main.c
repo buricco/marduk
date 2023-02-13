@@ -757,7 +757,9 @@ void every_scanline(void)
   n.tv_nsec = next_fire - timespec.tv_nsec;
   next_fire = timespec.tv_nsec + FIRE_TICK;
   if (next_fire > n.tv_nsec)
+  {
     nanosleep(&n, 0);
+  }
 }
 
 /*
@@ -993,6 +995,17 @@ static int init_rom(char *filename)
   return 0;
 }
 
+void audio_callback(void*  userdata, Uint8* stream, int len)
+{
+  int i;
+  int16_t sample;
+  for (i = 0; i < len; i += 2) {
+    sample = PSG_calc(psg);
+    stream[i] = sample & 0xff;
+    stream[i + 1] = sample >> 8;
+  }
+}
+
 int main(int argc, char **argv)
 {
   int e;
@@ -1084,8 +1097,8 @@ int main(int argc, char **argv)
   audio_spec.freq = 44100;
   audio_spec.format = AUDIO_S16LSB;
   audio_spec.channels = 1;
-  audio_spec.samples = 1024;
-  audio_spec.callback = NULL;
+  audio_spec.samples = 512;
+  audio_spec.callback = audio_callback;
 
   audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, NULL, 0);
   SDL_PauseAudioDevice(audio_device, 0);
@@ -1159,7 +1172,7 @@ int main(int argc, char **argv)
   keyjoy = joybyte = 0;
   int i;
 
-  uint16_t sound_sample = 0;
+  int16_t sound_sample = 0;
 
   while (!death_flag)
   {
@@ -1201,11 +1214,6 @@ int main(int argc, char **argv)
       if (scanline > 261)
       {
         scanline = 0;
-
-        for (i = 0; i < (44100 / 60); i++) {
-          sound_sample = PSG_calc(psg);
-          SDL_QueueAudio(audio_device, &sound_sample, 2);
-        }
         next_frame();
 
         if (vrEmuTms9918RegValue(vdp, TMS_REG_1) & 0x20)
