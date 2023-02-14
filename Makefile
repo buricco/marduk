@@ -18,8 +18,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-CFLAGS := $(CFLAGS) $(shell sdl2-config --cflags)
-LIBS   := $(LIBS) $(shell sdl2-config --libs)
+CFLAGS := $(CFLAGS) `sdl2-config --cflags`
+LIBS   := $(LIBS) `sdl2-config --libs`
 
 all:	marduk
 
