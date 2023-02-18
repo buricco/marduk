@@ -20,22 +20,39 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/*
+ * This code abstracts away the few differences between BSD Sockets (used by
+ * Linux, OSX, etc.), Winsock (used by Windows) and Watt-32 (used by MS-DOS).
+ * 
+ * From our perspective all these APIs are more or less the same except for
+ * whether/how they are set up and shut down, and whether they use the regular
+ * close() function to close a socket, or they need their own closesocket()
+ * instead (we define closesocket to close on *x to hide this difference).
+ * 
+ * The MS-DOS code has not been tested successfully, and the Windows code has
+ * not been tested at all.
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <sys/socket.h>
-#include <sys/times.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netdb.h>
-
-#ifdef __MSDOS__
-#include <tcp.h>
-
-#define close closesocket /* not used in this code in its filesystem sense */
+#ifdef _WIN32
+# include <winsock2.h>
+# include <ws2tcpip.h>
+#else
+# include <sys/socket.h>
+# include <sys/times.h>
+# include <sys/time.h>
+# include <sys/types.h>
+# include <netinet/in.h>
+# include <netdb.h>
+# ifdef __MSDOS__
+#  include <tcp.h>
+# else
+#  define closesocket close /* BSD Socket API does not distinguish */
+# endif
 #endif
 
 /*
@@ -97,13 +114,15 @@ int modem_init (char *server, char *port)
  int e;
  struct addrinfo hints, *result;
  
+#ifdef _WIN32
+ WSADATA wsadata;
+#endif
+ 
  status=0;
 
 #ifdef __MSDOS__
  /*
   * Watt-32 requires initialization (this is also where it does DHCP).
-  * Winsock initialization on a theoretical Windows port would also go here
-  * (not inside this ifdef, though, that would be daft).
   * 
   * It simplifies things for us a ton that Watt-32 mostly uses the BSD socket
   * APIs, because very little modification is necessary to interface with it.
@@ -112,6 +131,18 @@ int modem_init (char *server, char *port)
   *      up to be non-fatal, and just return us an error code?
   */
  if (sock_init())
+ {
+  fprintf (stderr, "TCP library failed to initialize\n");
+  return -1;
+ }
+#endif
+
+#ifdef _WIN32
+ /*
+  * Winsock also requires initialization, and like Watt-32, its interface is
+  * more or less the same as that of BSD.
+  */
+ if (WSAStartup(MAKEWORD(2,2), &wsaData))
  {
   fprintf (stderr, "TCP library failed to initialize\n");
   return -1;
@@ -131,7 +162,11 @@ int modem_init (char *server, char *port)
  }
  
  mosock=socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+#ifdef _WIN32
+ if (mosock==INVALID_SOCKET)
+#else
  if (mosock<0)
+#endif
  {
   perror ("Could not get a socket");
   freeaddrinfo(result);
@@ -155,5 +190,8 @@ void modem_deinit (void)
 {
  if (!status) return;
  printf ("Shutting down virtual modem.\n");
- close(mosock);
+ closesocket(mosock);
+#ifdef _WIN32
+ WSACleanup();
+#endif
 }

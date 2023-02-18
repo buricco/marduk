@@ -68,7 +68,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23a"
+#define VERSION "0.23b"
 
 /*
  * Forward declarations.
