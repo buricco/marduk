@@ -40,13 +40,13 @@ Status
 
   CPU - Tested, working.
   VDP - Tested, working.
-  PSG - Initial code to interface to the core.
-        Not hooked up to anything yet.
+  PSG - Tested, working.
   Console lights - Tested, working.
   Keyboard - Tested, working.
   Joystick - Implemented through keyboard; see below.
   Cable modem - Working, more or less.
-  Strict speed control - Tested (mostly with another emulator), working.
+  Strict speed control - Tested (mostly with another emulator), working
+                         (except on MS-DOS and Windows).
 
 Key bindings
 ============

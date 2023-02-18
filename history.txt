@@ -1,3 +1,8 @@
+0.23c (23021812)
+================
+
+  * TESTED AND WORKING ON WINDOWS (but speed control is disabled there).
+
 0.23b (23021811)
 ================
 

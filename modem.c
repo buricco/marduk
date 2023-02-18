@@ -142,7 +142,7 @@ int modem_init (char *server, char *port)
   * Winsock also requires initialization, and like Watt-32, its interface is
   * more or less the same as that of BSD.
   */
- if (WSAStartup(MAKEWORD(2,2), &wsaData))
+ if (WSAStartup(MAKEWORD(2,2), &wsadata))
  {
   fprintf (stderr, "TCP library failed to initialize\n");
   return -1;

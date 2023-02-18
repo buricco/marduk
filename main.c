@@ -68,7 +68,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23b"
+#define VERSION "0.23c"
 
 /*
  * Forward declarations.
@@ -864,8 +864,10 @@ void keyboard_poll(void)
           break;
         case SDLK_F3:
           diag_printf("Reset pressed\n");
+#ifndef _WIN32
           clock_gettime(CLOCK_REALTIME, &timespec);
           next_fire = timespec.tv_nsec + FIRE_TICK;
+#endif
           reinit_cpu();
           break;
         /* Alt-F4 - exit */
@@ -897,7 +899,7 @@ void every_scanline(void)
 #endif
   
   keyboard_poll();
-#ifndef __MSDOS__
+#if !(defined(__MSDOS__)||defined(_WIN32))
   clock_gettime(CLOCK_REALTIME, &timespec);
   n.tv_sec = 0;
   n.tv_nsec = next_fire - timespec.tv_nsec;
@@ -1499,7 +1501,7 @@ int main(int argc, char **argv)
   init_cpu();
 
   death_flag = scanline = 0;
-#ifndef __MSDOS__
+#if !(defined(__MSDOS__)||defined(_WIN32))
   clock_gettime(CLOCK_REALTIME, &timespec);
   next_fire = timespec.tv_nsec + FIRE_TICK;
 #endif
