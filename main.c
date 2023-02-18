@@ -70,7 +70,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23e"
+#define VERSION "0.23f"
 
 /*
  * Forward declarations.
@@ -776,7 +776,8 @@ void keyboard_poll(void)
        keyboard_buffer_put(0x7F);
        break;
       }
-      if (event.key.keysym.sym < 128)
+      if ((event.key.keysym.sym < 128) && 
+          (event.key.keysym.sym != SDLK_BACKSPACE)) /* urk */
       {
         static char *shiftnums = ")!@#$%^&*(";
         SDL_Keymod m;
