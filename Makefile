@@ -18,8 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-# This should also work with Windows, using MinGW, if you do
-#   LIBS="-lws2_32 -Wl,-Bstatic -lpthread"
+# This should also work with Windows, using MinGW, if you do LIBS="-lws2_32"
 
 CFLAGS := $(CFLAGS) `sdl2-config --cflags`
 LIBS   := $(LIBS) `sdl2-config --libs`

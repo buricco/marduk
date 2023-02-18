@@ -1,3 +1,9 @@
+0.23e (23021815)
+================
+
+  * Windows version is now at parity with Linux.  pthread dependency also
+    removed.
+
 0.23d (23021813)
 ================
 

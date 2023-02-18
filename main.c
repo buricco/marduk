@@ -55,7 +55,7 @@
 #endif
 
 #ifdef _WIN32
-#include <pthread.h>
+#include <windows.h>
 #endif
 
 /* Chipset includes */
@@ -70,7 +70,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23d"
+#define VERSION "0.23e"
 
 /*
  * Forward declarations.
@@ -90,6 +90,11 @@ void fatal_diag(int, char *);
 #define FIRE_TICK 63492
 unsigned long long next_fire;
 struct timespec timespec;
+#endif
+
+#ifdef _WIN32
+LARGE_INTEGER currenttime,throttlerate;
+long long wantedtime, looptimedesired;
 #endif
 
 /*
@@ -907,7 +912,18 @@ void every_scanline(void)
 #endif
   
   keyboard_poll();
-#ifndef __MSDOS__
+#ifdef _WIN32
+  /* Sloppy - from modapple */
+  
+  QueryPerformanceCounter(&currenttime);
+  while (currenttime.QuadPart<wantedtime)
+  {
+    QueryPerformanceCounter(&currenttime);
+    SwitchToThread();
+  }
+  wantedtime=currenttime.QuadPart+looptimedesired;
+#else
+# ifndef __MSDOS__
   clock_gettime(CLOCK_REALTIME, &timespec);
   n.tv_sec = 0;
   n.tv_nsec = next_fire - timespec.tv_nsec;
@@ -916,6 +932,7 @@ void every_scanline(void)
   {
     nanosleep(&n, 0);
   }
+# endif
 #endif
 }
 
@@ -1509,9 +1526,15 @@ int main(int argc, char **argv)
   init_cpu();
 
   death_flag = scanline = 0;
-#ifndef __MSDOS__
+#ifdef _WIN32
+  wantedtime=0;
+  QueryPerformanceFrequency(&throttlerate);
+  looptimedesired=throttlerate.QuadPart/15720;
+#else
+# ifndef __MSDOS__
   clock_gettime(CLOCK_REALTIME, &timespec);
   next_fire = timespec.tv_nsec + FIRE_TICK;
+# endif
 #endif
   next_watchdog = 0;
   keyjoy = joybyte = 0;
