@@ -1,3 +1,9 @@
+0.23d (23021813)
+================
+
+  * Attempt at getting speed control working on Windows.  It doesn't work, and
+    the issues are documented in main.c.  (Uses -lpthread)
+
 0.23c (23021812)
 ================
 

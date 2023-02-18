@@ -24,8 +24,6 @@
  * Note: Some parts of this program have other copyrights.  See the individual
  *       files for specific copyright information.  SDL2 has different but
  *       similar license terms.
- *
- * Testing has currently only been done under Debian 11 Linux.
  */
 
 /* C99 includes */
@@ -56,6 +54,10 @@
 #define diag_printf printf
 #endif
 
+#ifdef _WIN32
+#include <pthread.h>
+#endif
+
 /* Chipset includes */
 #include "tms9918.h"
 #include "tms_util.h"
@@ -68,7 +70,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23c"
+#define VERSION "0.23d"
 
 /*
  * Forward declarations.
@@ -891,6 +893,12 @@ void keyboard_poll(void)
 
 /*
  * Things to do once per scanline, like poll the keyboard, joystick, etc.
+ * 
+ * XXX: Although the entire functionality for slowing the system down is
+ *      CLAIMED to be present in -lpthread on Windows, it doesn't actually
+ *      seem to do anything, as the emulation still appears to run completely
+ *      unthrottled.  This really needs a system-specific implementation on
+ *      "#ifdef _WIN32" rather than relying on -lpthread.
  */
 void every_scanline(void)
 {
@@ -899,7 +907,7 @@ void every_scanline(void)
 #endif
   
   keyboard_poll();
-#if !(defined(__MSDOS__)||defined(_WIN32))
+#ifndef __MSDOS__
   clock_gettime(CLOCK_REALTIME, &timespec);
   n.tv_sec = 0;
   n.tv_nsec = next_fire - timespec.tv_nsec;
@@ -1501,7 +1509,7 @@ int main(int argc, char **argv)
   init_cpu();
 
   death_flag = scanline = 0;
-#if !(defined(__MSDOS__)||defined(_WIN32))
+#ifndef __MSDOS__
   clock_gettime(CLOCK_REALTIME, &timespec);
   next_fire = timespec.tv_nsec + FIRE_TICK;
 #endif
