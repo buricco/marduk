@@ -1,3 +1,8 @@
+0.24g (23021817)
+================
+
+  * Windows version now uses native dialogs when going down in flames.
+
 0.23e (23021815)
 ================
 

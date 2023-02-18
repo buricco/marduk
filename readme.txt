@@ -62,6 +62,26 @@ Key bindings
 
   Everything else should be obvious.
 
+ROM Files
+=========
+
+  No ROM files are included.
+  
+  One of the following is expected:
+  
+    NabuPC-U53-90020060-RevA-2732.bin (-4, default)
+    NabuPC-U53-90020060-RevB-2764.bin (-8)
+
+  If you have a different firmware you can try it with the -B switch.
+
+Using a Virtual Adapter (Cable Modem Emulator)
+==============================================
+
+  The nabu.ca virtual adapter defaults to listening on 127.0.0.1:5816.
+  
+  If you need a different address, use the -S switch (e.g., -S 192.168.0.2).
+  If you need a different port, use the -P switch (e.g., -P 5815).
+
 License
 =======
 

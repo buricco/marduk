@@ -70,7 +70,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23f"
+#define VERSION "0.23g"
 
 /*
  * Forward declarations.
@@ -137,6 +137,7 @@ uint8_t joybyte;
  * extender.
  */
 uint8_t *display, *vgamem;
+int ttyup;
 #else
 /*
  * SDL2 structure pointers.
@@ -397,7 +398,7 @@ uint8_t port_read(z80 *mycpu, uint8_t port)
     t = PSG_readReg(psg, psg_reg_address);
     return t;
   case 0x41:
-    fatal_diag(-1, "IO read from 0x41, this shouldn't happen, exiting!\r\n");
+    fatal_diag(-1, "IO read from 0x41, this shouldn't happen, exiting!");
     return 0;
   case 0x80:
     if (gotmodem)
@@ -480,7 +481,7 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
   case 0x41: /* write address to PSG */
     if (val > 0x1f)
     {
-      fatal_diag(-1, "PSG reg address > 0x1f when writing, exiting!\r\n");
+      fatal_diag(-1, "PSG reg address > 0x1f when writing, exiting!");
     }
     psg_reg_address = val;
     return;
@@ -1203,7 +1204,7 @@ static int init_rom(char *filename)
   file = fopen(filename, "rb");
   if (!file)
   {
-    fprintf(stderr, "FATAL: Failed to open ROM file\n");
+    fatal_diag(1, "FATAL: Failed to open ROM file");
     return 1;
   }
   fseek(file, 0, SEEK_END);
@@ -1211,8 +1212,8 @@ static int init_rom(char *filename)
   if ((romsize != 4096) && (romsize != 8192))
   {
     fclose(file);
-    fprintf(stderr, "FATAL: Size of ROM file is incorrect\n"
-                    "  (expected size is 4096 or 8192 bytes)\n");
+    fatal_diag(2, "FATAL: Size of ROM file is incorrect"
+                  "  (expected size is 4096 or 8192 bytes)\n");
 
     return 2;
   }
@@ -1269,7 +1270,7 @@ void initty(void)
  /* Unlock conventional memory, like DOS4G */
  if (!__djgpp_nearptr_enable())
  {
-  fprintf (stderr, "FATAL: Could not get access to 8086 memory\n");
+  fatal_diag (2, "FATAL: Could not get access to 8086 memory");
   exit(2);
  }
  
@@ -1316,9 +1317,14 @@ void deinitty(void)
 void fatal_diag (int code, char *message)
 {
 #ifdef __MSDOS__
- deinitty();
+ if (ttyup) deinitty();
 #endif
- fprintf(stderr, "%s", message);
+#ifdef _WIN32
+ /* 16 = stop / red X */
+ MessageBox(0, message, "Marduk", 16);
+#else
+ fprintf(stderr, "%s\n", message);
+#endif
  exit(code);
 }
 
@@ -1331,7 +1337,9 @@ int main(int argc, char **argv)
   int scanline;
   int noinitmodem;
   
-#ifndef __MSDOS__
+#ifdef __MSDOS__
+  ttyup=0;
+#else
   SDL_version sdlver;
 
   SDL_GetVersion(&sdlver);
@@ -1406,7 +1414,7 @@ int main(int argc, char **argv)
    */
   if (SDL_Init(SDL_INIT_EVERYTHING))
   {
-    fprintf(stderr, "FATAL: Could not start SDL\n");
+    fatal_diag(2, "FATAL: Could not start SDL");
     return 2;
   }
 
@@ -1414,20 +1422,20 @@ int main(int argc, char **argv)
                             SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
   if (!screen)
   {
-    fprintf(stderr, "FATAL: Could not create display\n");
+    fatal_diag(2, "FATAL: Could not create display");
     return 2;
   }
   renderer = SDL_CreateRenderer(screen, -1, 0);
   if (!renderer)
   {
-    fprintf(stderr, "FATAL: Could not set up renderer\n");
+    fatal_diag(2, "FATAL: Could not set up renderer");
     return 2;
   }
   texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
                               SDL_TEXTUREACCESS_STREAMING, 640, 480);
   if (!texture)
   {
-    fprintf(stderr, "FATAL: Could not create canvas\n");
+    fatal_diag(2, "FATAL: Could not create canvas");
     return 2;
   }
 #endif
@@ -1439,7 +1447,7 @@ int main(int argc, char **argv)
 #endif
   if (!display)
   {
-    fprintf(stderr, "FATAL: Not enough memory for offscreen buffer\n");
+    fatal_diag(2, "FATAL: Not enough memory for offscreen buffer");
     return 2;
   }
 
@@ -1464,8 +1472,7 @@ int main(int argc, char **argv)
   vdp = vrEmuTms9918New();
   if (!vdp)
   {
-    fprintf(stderr, "FATAL: Could not set up VDP emulation\n");
-    return 3;
+    fatal_diag(3, "FATAL: Could not set up VDP emulation");
   }
   vrEmuTms9918Reset(vdp);
 
@@ -1477,8 +1484,7 @@ int main(int argc, char **argv)
   psg = PSG_new(1789772, 44100);
   if (!psg)
   {
-    fprintf(stderr, "FATAL: Could not set up PSG emulation\n");
-    return 4;
+    fatal_diag(4, "FATAL: Could not set up PSG emulation");
   }
   PSG_setVolumeMode(psg, 2);
   PSG_reset(psg);
@@ -1516,6 +1522,7 @@ int main(int argc, char **argv)
 
 #ifdef __MSDOS__
   initty(); /* Now we're ready to kick into MCGA mode. */
+  ttyup=1;
 #endif
 
   /*
