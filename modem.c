@@ -42,7 +42,7 @@
 static int status;
 static int mosock;
 
-uint8_t modem_bytes_available()
+uint8_t modem_bytes_available (void)
 {
  struct timeval timeval;
  fd_set fds;
@@ -86,7 +86,7 @@ void modem_write (uint8_t data)
  return;
 }
 
-int modem_init (void)
+int modem_init (char *server, char *port)
 {
  int e;
  
@@ -97,9 +97,9 @@ int modem_init (void)
  memset(&hints,0,sizeof(struct addrinfo));
  hints.ai_family=AF_INET;
  hints.ai_socktype=SOCK_STREAM;
- hints.ai_flags=(AI_NUMERICHOST | AI_NUMERICSERV);
+ /* hints.ai_flags=(AI_NUMERICHOST | AI_NUMERICSERV); */
  hints.ai_protocol=IPPROTO_TCP;
- e=getaddrinfo("127.0.0.1", "5816", &hints, &result);
+ e=getaddrinfo(server, port, &hints, &result);
  if (e)
  {
   fprintf (stderr, "Modem init failed: %s\n", gai_strerror(e));

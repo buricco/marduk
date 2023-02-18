@@ -51,12 +51,11 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.22"
+#define VERSION "0.23"
 
 /*
  * Forward declaration.
  */
-static void reinit_cpu(void);
 static void reinit_cpu(void);
 
 /*
@@ -1011,14 +1010,17 @@ int main(int argc, char **argv)
   int e;
 
   char *bios;
+  char *server, *port;
 
   SDL_version sdlver;
   int scanline;
 
   SDL_GetVersion(&sdlver);
 
+  server = "127.0.0.1";
+  port = "5816";
   bios = ROMFILE1;
-  while (-1 != (e = getopt(argc, argv, "48B:")))
+  while (-1 != (e = getopt(argc, argv, "48B:S:P:")))
   {
     switch (e)
     {
@@ -1031,15 +1033,24 @@ int main(int argc, char **argv)
     case 'B':
       bios = optarg;
       break;
+    case 'S':
+      server = optarg;
+      break;
+    case 'P':
+      port = optarg;
+      break;
     default:
-      fprintf(stderr, "usage: %s [-4 | 8 | -B filename]\n", argv[0]);
+      fprintf(stderr, 
+              "usage: %s [-4 | 8 | -B filename] [-S server] [-P port]\n",
+              argv[0]);
       return 1;
     }
   }
 
   /* Copyrights for all components */
   printf("Marduk version " VERSION " NABU Emulator\n"
-         "  Copyright 2022 S. V. Nickolas.\n"
+         "  Copyright 2022, 2023 S. V. Nickolas.\n"
+         "  Copyright 2023 Marcin Wołoszczuk.\n"
          "  Z80 emulation code copyright 2019 Nicolas Allemand.\n"
          "  Includes vrEmuTms9918 copyright 2021, 2022 Troy Schrapel.\n"
          "  Includes emu2149 copyright 2001-2022 Mitsutaka Okazaki.\n");
@@ -1142,7 +1153,7 @@ int main(int argc, char **argv)
    * modem_init() returns 0=success, -1=failure, but our internal flag needs
    * 1=success, 0=failure so use ! to quickly make that change.
    */
-  e = modem_init();
+  e = modem_init(server, port);
   if (e)
   {
     fprintf(stderr, "Modem will not be available.\n");

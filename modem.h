@@ -25,11 +25,11 @@
 
 #include <stdint.h>
 
-int modem_init (void);
+int modem_init (char *, char *);
 void modem_deinit (void);
 
 uint8_t modem_read (uint8_t *b);
 void modem_write (uint8_t);
-uint8_t modem_bytes_available();
+uint8_t modem_bytes_available (void);
 
 #endif /* H_MODEM */
