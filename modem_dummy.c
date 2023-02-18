@@ -72,3 +72,9 @@ int modem_init (void)
 void modem_deinit (void)
 {
 }
+
+uint8_t modem_bytes_available (void)
+{
+ return 0;
+}
+

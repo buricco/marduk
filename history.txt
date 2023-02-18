@@ -1,3 +1,10 @@
+0.23a (23021810)
+================
+
+  * -N switch to inhibit initialization of virtual modem.
+  * Preliminary support for MS-DOS added (some of the TCP framework could
+    perhaps be used for a Windows port as well).
+
 0.23 (23021809)
 ===============
 

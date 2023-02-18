@@ -32,12 +32,29 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
 
+/*
+ * MS-DOS (DJGPP):
+ *   Use BIOS to access hardware, redirected through DPMI
+ *   XXX: we need to completely disable sigint, sigquit etc. in DJGPP
+ * 
+ * Otherwise:
+ *   Use SDL for hardware abstraction
+ */
+#ifdef __MSDOS__
+#include <dpmi.h>
+#include <pc.h>
+#include <sys/nearptr.h>
+#define diag_printf(...)
+#else
 /* SDL2 include */
 #include <SDL.h>
+#define diag_printf printf
+#endif
 
 /* Chipset includes */
 #include "tms9918.h"
@@ -51,12 +68,13 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23"
+#define VERSION "0.23a"
 
 /*
- * Forward declaration.
+ * Forward declarations.
  */
 static void reinit_cpu(void);
+void fatal_diag(int, char *);
 
 /*
  * Speed control.
@@ -64,9 +82,13 @@ static void reinit_cpu(void);
  * Not exact, but it helps keep the speed more or less even based on how long
  * it takes to run one scanline's worth of code.
  */
+#ifdef __MSDOS__
+
+#else
 #define FIRE_TICK 63492
 unsigned long long next_fire;
 struct timespec timespec;
+#endif
 
 /*
  * The NABU has 64K RAM.
@@ -101,6 +123,14 @@ unsigned next_watchdog;
 int keyjoy;
 uint8_t joybyte;
 
+#ifdef __MSDOS__
+/*
+ * display is an offscreen buffer which is blitted to the screen every frame.
+ * vgamem is a pointer to 0x000A0000 absolute, translated through the DJGPP
+ * extender.
+ */
+uint8_t *display, *vgamem;
+#else
 /*
  * SDL2 structure pointers.
  *
@@ -114,6 +144,7 @@ SDL_AudioDeviceID audio_device;
 SDL_AudioSpec audio_spec;
 
 uint32_t *display;
+#endif
 
 int psg_calc_flag = 0;
 
@@ -359,8 +390,7 @@ uint8_t port_read(z80 *mycpu, uint8_t port)
     t = PSG_readReg(psg, psg_reg_address);
     return t;
   case 0x41:
-    printf("IO read from 0x41, this shouldn't happen, exiting!\r\n");
-    exit(-1);
+    fatal_diag(-1, "IO read from 0x41, this shouldn't happen, exiting!\r\n");
     return 0;
   case 0x80:
     if (gotmodem)
@@ -415,8 +445,8 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
     {
       if (!(psg_reg7 & 0x40))
       {
-        printf("Writing to PORTA when it's set to input, DENIED!\r\n");
-        printf("psg_reg7 = %02X\r\n", psg_reg7);
+        diag_printf("Writing to PORTA when it's set to input, DENIED!\r\n");
+        diag_printf("psg_reg7 = %02X\r\n", psg_reg7);
         // return;
       }
       if (val & 0x10)
@@ -433,8 +463,8 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
     {
       if (!(psg_reg7 & 0x80))
       {
-        printf("Writing to PORTB when it's set to input, DENIED!\r\n");
-        printf("psg_reg7 = %02X\r\n", psg_reg7);
+        diag_printf("Writing to PORTB when it's set to input, DENIED!\r\n");
+        diag_printf("psg_reg7 = %02X\r\n", psg_reg7);
         // return;
       }
     }
@@ -443,8 +473,7 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
   case 0x41: /* write address to PSG */
     if (val > 0x1f)
     {
-      printf("PSG reg address > 0x1f when writing, exiting!\r\n");
-      exit(-1);
+      fatal_diag(-1, "PSG reg address > 0x1f when writing, exiting!\r\n");
     }
     psg_reg_address = val;
     return;
@@ -467,7 +496,121 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
   }
 }
 
+#ifdef __MSDOS__
 void keyboard_poll()
+{
+ __dpmi_regs regs;
+ uint16_t k;
+ 
+ regs.h.ah=0x01;
+ __dpmi_int(0x16, &regs);
+ if (regs.x.flags&0x40) return; /* Z */
+ 
+ regs.h.ah=0x00;
+ __dpmi_int(0x16, &regs);
+ k=regs.x.ax;
+ 
+ if (keyjoy&&((k&0xFF)==0x20))
+ {
+ }
+ 
+ if (k==0x0E08) /* BkSp */
+ {
+  keyboard_buffer_put(0x7F);
+  return;
+ }
+
+ /* Plain, ordinary, ASCII */
+ if ((k&0xFF)&&(!(k&0x80)))
+ {
+  keyboard_buffer_put(k&0x7F);
+  return;
+ }
+ 
+ switch (k>>8)
+ {
+  case 0x48: /* up */
+   if (keyjoy)
+   {
+   }
+   else
+   {
+    keyboard_buffer_put(0xE2);
+    keyboard_buffer_put(0xF2);
+   }
+   break;
+  case 0x50: /* down */
+   if (keyjoy)
+   {
+   }
+   else
+   {
+    keyboard_buffer_put(0xE3);
+    keyboard_buffer_put(0xF3);
+   }
+   break;
+  case 0x4B: /* left */
+   if (keyjoy)
+   {
+   }
+   else
+   {
+    keyboard_buffer_put(0xE1);
+    keyboard_buffer_put(0xF1);
+   }
+   break;
+  case 0x4D: /* right */
+   if (keyjoy)
+   {
+   }
+   else
+   {
+    keyboard_buffer_put(0xE0);
+    keyboard_buffer_put(0xF0);
+   }
+   break;
+  case 0x49: /* PgUp */
+   keyboard_buffer_put(0xE5);
+   keyboard_buffer_put(0xF5);
+   break;
+  case 0x51: /* PgDn */
+   keyboard_buffer_put(0xE4);
+   keyboard_buffer_put(0xF4);
+   break;
+  case 0x52: /* Ins */
+   keyboard_buffer_put(0xE7);
+   keyboard_buffer_put(0xF7);
+   break;
+  case 0x53: /* Del */
+   keyboard_buffer_put(0xE6);
+   keyboard_buffer_put(0xF6);
+   break;
+  case 0x4F: /* End */
+   keyboard_buffer_put(0xEA);
+   keyboard_buffer_put(0xFA);
+   break;
+  
+  /* Special Keys */
+  case 0x3D: /* F3 */
+#if 0 /* DJGPP doesn't have this */
+   clock_gettime(CLOCK_REALTIME, &timespec);
+   next_fire = timespec.tv_nsec + FIRE_TICK;
+#endif
+   reinit_cpu();
+   break;
+  case 0x3F: /* F5 */
+   keyjoy=0;
+   joybyte=0;
+   break;
+  case 0x40: /* F6 */
+   keyjoy=1;
+   break;
+ }
+ 
+ if (k==0x4400) death_flag=1;
+}
+#else
+void keyboard_poll(void)
 {
   SDL_Event event;
   /* eat up all events */
@@ -713,14 +856,14 @@ void keyboard_poll()
          case SDLK_F5:
           keyjoy=0;
           joybyte=0;
-          printf ("Arrows and Space are KEYBOARD\n");
+          diag_printf ("Arrows and Space are KEYBOARD\n");
           break;
          case SDLK_F6:
           keyjoy=1;
-          printf ("Arrows and Space are JOYSTICK\n");
+          diag_printf ("Arrows and Space are JOYSTICK\n");
           break;
         case SDLK_F3:
-          printf("Reset pressed\n");
+          diag_printf("Reset pressed\n");
           clock_gettime(CLOCK_REALTIME, &timespec);
           next_fire = timespec.tv_nsec + FIRE_TICK;
           reinit_cpu();
@@ -742,15 +885,19 @@ void keyboard_poll()
     }
   }
 }
+#endif
 
 /*
  * Things to do once per scanline, like poll the keyboard, joystick, etc.
  */
 void every_scanline(void)
 {
+#ifndef __MSDOS__
   struct timespec n;
-
+#endif
+  
   keyboard_poll();
+#ifndef __MSDOS__
   clock_gettime(CLOCK_REALTIME, &timespec);
   n.tv_sec = 0;
   n.tv_nsec = next_fire - timespec.tv_nsec;
@@ -759,6 +906,7 @@ void every_scanline(void)
   {
     nanosleep(&n, 0);
   }
+#endif
 }
 
 /*
@@ -772,6 +920,59 @@ void render_scanline(int line)
   uint32_t r;
   uint32_t bg;
   uint8_t a_scanline[256];
+#ifdef __MSDOS__ /* Simplified 320x200 raw-memory version */
+  uint8_t g_scanline[320];
+  if ((line<0)||(line > 199)) return;
+
+  /*
+   * To note:
+   * The background color is register 7, AND 0x0F.
+   */
+  bg = vrEmuTms9918RegValue(vdp, 7) & 0x0F;
+  memset(g_scanline, 0, 320);
+  for (x = 28; x < 291; x++)
+    g_scanline[x] = bg;
+  if ((line >= 4) && (line < 196))
+  {
+    vrEmuTms9918ScanLine(vdp, line - 4, a_scanline);
+    for (x=0; x<256; x++) g_scanline[32+x]=a_scanline[x];
+  }
+
+  /* Double-scan. */
+  r = line * 320;
+  for (x=0; x<320; x++)
+   display[r+x]=g_scanline[x];
+
+  /*
+   * If the display is in "TV" mode, just spew some NTSC noise into the buffer.
+   *
+   * This actually looks pretty realistic (I grew up in the days of aerials and
+   * 3 major TV networks, and am well acquainted with the appearance of NTSC
+   * noise).
+   */
+  if (!(ctrlreg & 0x02))
+  {
+    uint32_t c;
+
+    r = line * 320;
+    for (x = 0; x < 320; x++)
+    {
+      c = rand() & 0xFF;
+      display[r + x] = c?0x1F:0x10;
+    }
+  }
+
+  /*
+   * Draw the LEDs.
+   * XXX: Should do something fancier for the joystick
+   */
+  
+  if (keyjoy) display[63643]=0x1F;
+  
+  display[63645]=(ctrlreg&0x20)?0x1E:0x10; /* Yellow LED */
+  display[63647]=(ctrlreg&0x10)?0x1C:0x10; /* Red LED */
+  display[63649]=(ctrlreg&0x08)?0x1A:0x10; /* Green LED */
+#else /* The full 640x480 SDL version */
   uint32_t g_scanline[320];
   if (line > 239)
     return;
@@ -901,6 +1102,7 @@ void render_scanline(int line)
       display[r + 640 + 631] = ri[2];
     }
   }
+#endif
 }
 
 /*
@@ -910,10 +1112,14 @@ void render_scanline(int line)
  */
 void next_frame(void)
 {
+#ifdef __MSDOS__
+  memcpy (vgamem, display, 64000);
+#else
   SDL_UpdateTexture(texture, 0, display, 640 * sizeof(uint32_t));
   SDL_RenderClear(renderer);
   SDL_RenderCopy(renderer, texture, 0, 0);
   SDL_RenderPresent(renderer);
+#endif
 }
 
 /*
@@ -994,7 +1200,8 @@ static int init_rom(char *filename)
   return 0;
 }
 
-void audio_callback(void*  userdata, Uint8* stream, int len)
+#ifndef __MSDOS__
+void audio_callback(void *userdata, Uint8 *stream, int len)
 {
   int i;
   int16_t sample;
@@ -1004,6 +1211,88 @@ void audio_callback(void*  userdata, Uint8* stream, int len)
     stream[i + 1] = sample >> 8;
   }
 }
+#endif
+
+#ifdef __MSDOS__
+/*
+ * SDL is operated in 32 BPP mode.
+ * On the contrary, however, the MS-DOS version uses an indexed mode with only
+ * 256 colors (and in fact we only assign 32 of them currently).
+ * 
+ * Translate RGB24 to RGB18 and then output it directly to the VGA registers.
+ */
+void palette (uint8_t c, uint8_t r, uint8_t g, uint8_t b)
+{
+ r>>=2;
+ g>>=2;
+ b>>=2;
+ 
+ outportb(0x03C8, c);
+ outportb(0x03C9, r);
+ outportb(0x03C9, g);
+ outportb(0x03C9, b);
+}
+
+void initty(void)
+{
+ __dpmi_regs regs;
+ int t;
+ 
+ /* Unlock conventional memory, like DOS4G */
+ if (!__djgpp_nearptr_enable())
+ {
+  fprintf (stderr, "FATAL: Could not get access to 8086 memory\n");
+  exit(2);
+ }
+ 
+ /* Enter MCGA graphics mode */
+ regs.x.ax=0x0013;
+ __dpmi_int(0x10, &regs);
+ 
+ /* Get pointer to video memory */
+ vgamem=((uint8_t *)0x000A0000)+__djgpp_conventional_base;
+ 
+ /* Set palette entries $00-$0F to the TMS9918 colors */
+ for (t=0; t<16; t++) 
+  palette(t, vrEmuTms9918Palette[t]>>24, vrEmuTms9918Palette[t]>>16, 
+          vrEmuTms9918Palette[t]>>8);
+ 
+ /* Set palette entries $10-$1F to the CGA colors for UI elements */
+ palette (0x10, 0x00, 0x00, 0x00);
+ palette (0x11, 0x00, 0x00, 0xCC);
+ palette (0x12, 0x00, 0xCC, 0x00);
+ palette (0x13, 0x00, 0xCC, 0xCC);
+ palette (0x14, 0xCC, 0x00, 0x00);
+ palette (0x15, 0xCC, 0x00, 0xCC);
+ palette (0x16, 0xCC, 0x77, 0x00);
+ palette (0x17, 0xCC, 0xCC, 0xCC);
+ palette (0x18, 0x80, 0x80, 0x80);
+ palette (0x19, 0x00, 0x00, 0xFF);
+ palette (0x1A, 0x00, 0xFF, 0x00);
+ palette (0x1B, 0x00, 0xFF, 0xFF);
+ palette (0x1C, 0xFF, 0x00, 0x00);
+ palette (0x1D, 0xFF, 0x00, 0xFF);
+ palette (0x1E, 0xFF, 0xFF, 0x00);
+ palette (0x1F, 0xFF, 0xFF, 0xFF);
+}
+
+void deinitty(void)
+{
+ __dpmi_regs regs;
+
+ regs.x.ax=0x0003;
+ __dpmi_int(0x10, &regs);
+}
+#endif
+
+void fatal_diag (int code, char *message)
+{
+#ifdef __MSDOS__
+ deinitty();
+#endif
+ fprintf(stderr, "%s", message);
+ exit(code);
+}
 
 int main(int argc, char **argv)
 {
@@ -1011,16 +1300,23 @@ int main(int argc, char **argv)
 
   char *bios;
   char *server, *port;
-
-  SDL_version sdlver;
   int scanline;
+  int noinitmodem;
+  
+#ifndef __MSDOS__
+  SDL_version sdlver;
 
   SDL_GetVersion(&sdlver);
+#endif
+  
+  noinitmodem=0;
 
+  /* This is still relevant for MS-DOS, thank you Watt-32 */
   server = "127.0.0.1";
   port = "5816";
+  
   bios = ROMFILE1;
-  while (-1 != (e = getopt(argc, argv, "48B:S:P:")))
+  while (-1 != (e = getopt(argc, argv, "48B:S:P:N")))
   {
     switch (e)
     {
@@ -1032,6 +1328,9 @@ int main(int argc, char **argv)
       break;
     case 'B':
       bios = optarg;
+      break;
+    case 'N': /* Not currently documenting this */
+      noinitmodem=1;
       break;
     case 'S':
       server = optarg;
@@ -1048,20 +1347,27 @@ int main(int argc, char **argv)
   }
 
   /* Copyrights for all components */
+#ifdef __MSDOS__
+  printf("Marduk version D-" VERSION " NABU Emulator\n"
+#else
   printf("Marduk version " VERSION " NABU Emulator\n"
+#endif
          "  Copyright 2022, 2023 S. V. Nickolas.\n"
          "  Copyright 2023 Marcin Wołoszczuk.\n"
          "  Z80 emulation code copyright 2019 Nicolas Allemand.\n"
          "  Includes vrEmuTms9918 copyright 2021, 2022 Troy Schrapel.\n"
          "  Includes emu2149 copyright 2001-2022 Mitsutaka Okazaki.\n");
+#ifndef __MSDOS__
   printf("  Uses SDL %u.%u.%u.  See documentation for copyright details.\n",
          sdlver.major, sdlver.minor, sdlver.patch);
+#endif
   printf("  All third-party code is used under license.  "
          "See license.txt for details.\n\n");
 
   /* Only used for the white noise generator; a good RNG isn't necessary. */
   srand(time(0));
 
+#ifndef __MSDOS__ /* Wait to set MS-DOS video up until later. */
   /*
    * Get SDL2 up and running.
    *
@@ -1096,13 +1402,20 @@ int main(int argc, char **argv)
     fprintf(stderr, "FATAL: Could not create canvas\n");
     return 2;
   }
+#endif
+
+#ifdef __MSDOS__
+  display = malloc(64000);
+#else
   display = calloc(307200, sizeof(uint32_t));
+#endif
   if (!display)
   {
     fprintf(stderr, "FATAL: Not enough memory for offscreen buffer\n");
     return 2;
   }
 
+#ifndef __MSDOS__
   /* audio stuff */
   SDL_zero(audio_spec);
   audio_spec.freq = 44100;
@@ -1113,6 +1426,8 @@ int main(int argc, char **argv)
 
   audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, NULL, 0);
   SDL_PauseAudioDevice(audio_device, 0);
+#endif
+
   /*
    * Set up the VDP emulation.
    *
@@ -1153,7 +1468,10 @@ int main(int argc, char **argv)
    * modem_init() returns 0=success, -1=failure, but our internal flag needs
    * 1=success, 0=failure so use ! to quickly make that change.
    */
-  e = modem_init(server, port);
+  if (noinitmodem)
+    e = -1;
+  else
+    e = modem_init(server, port);
   if (e)
   {
     fprintf(stderr, "Modem will not be available.\n");
@@ -1168,6 +1486,10 @@ int main(int argc, char **argv)
   ctrlreg = 0x3A;
   printf("Emulation ready to start\n");
 
+#ifdef __MSDOS__
+  initty(); /* Now we're ready to kick into MCGA mode. */
+#endif
+
   /*
    * Get ready to start the emulated Z80.
    *
@@ -1177,8 +1499,10 @@ int main(int argc, char **argv)
   init_cpu();
 
   death_flag = scanline = 0;
+#ifndef __MSDOS__
   clock_gettime(CLOCK_REALTIME, &timespec);
   next_fire = timespec.tv_nsec + FIRE_TICK;
+#endif
   next_watchdog = 0;
   keyjoy = joybyte = 0;
   int i;
@@ -1213,7 +1537,7 @@ int main(int argc, char **argv)
         if (next_watchdog >= 58000)
         {
           next_watchdog = 0;
-          printf("Keyboard: kicking the dog\n");
+          diag_printf("Keyboard: kicking the dog\n");
           keyboard_buffer_put(0x94);
         }
       }
@@ -1241,6 +1565,10 @@ int main(int argc, char **argv)
     }
     z80_step(&cpu);
   }
+  
+#ifdef __MSDOS__ /* Return to text mode */
+  deinitty();
+#endif
 
   /* Clean up and exit properly. */
   printf("Shutting down emulation\n");
@@ -1249,7 +1577,9 @@ int main(int argc, char **argv)
   PSG_delete(psg);
   vrEmuTms9918Destroy(vdp);
   free(display);
+#ifndef __MSDOS__
   SDL_Quit();
+#endif
 
   return 0;
 }

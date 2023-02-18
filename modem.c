@@ -32,6 +32,12 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+#ifdef __MSDOS__
+#include <tcp.h>
+
+#define close closesocket /* not used in this code in its filesystem sense */
+#endif
+
 /*
  * Version of modem.c to interface with DJ Sures' emulator.
  * 
@@ -89,11 +95,29 @@ void modem_write (uint8_t data)
 int modem_init (char *server, char *port)
 {
  int e;
+ struct addrinfo hints, *result;
  
  status=0;
- 
- struct addrinfo hints, *result;
 
+#ifdef __MSDOS__
+ /*
+  * Watt-32 requires initialization (this is also where it does DHCP).
+  * Winsock initialization on a theoretical Windows port would also go here
+  * (not inside this ifdef, though, that would be daft).
+  * 
+  * It simplifies things for us a ton that Watt-32 mostly uses the BSD socket
+  * APIs, because very little modification is necessary to interface with it.
+  * 
+  * XXX: This is currently fatal if the packet driver is missing.  How to set
+  *      up to be non-fatal, and just return us an error code?
+  */
+ if (sock_init())
+ {
+  fprintf (stderr, "TCP library failed to initialize\n");
+  return -1;
+ }
+#endif
+ 
  memset(&hints,0,sizeof(struct addrinfo));
  hints.ai_family=AF_INET;
  hints.ai_socktype=SOCK_STREAM;
