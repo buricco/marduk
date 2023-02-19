@@ -973,7 +973,7 @@ void render_scanline(int line)
    display[r+x]=g_scanline[x];
 
   /* Apparently some third-party software flips this bit incorrectly. */
-#ifndef ALLOW_NTSC_NOISE
+#ifdef ALLOW_NTSC_NOISE
   /*
    * If the display is in "TV" mode, just spew some NTSC noise into the buffer.
    *
@@ -1037,7 +1037,7 @@ void render_scanline(int line)
   }
 
   /* Apparently some third-party software flips this bit incorrectly. */
-#ifndef ALLOW_NTSC_NOISE
+#ifdef ALLOW_NTSC_NOISE
   /*
    * If the display is in "TV" mode, just spew some NTSC noise into the buffer.
    *
