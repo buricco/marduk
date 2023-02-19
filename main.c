@@ -1036,6 +1036,8 @@ void render_scanline(int line)
         display[r + 640 + (x << 1)] = display[r + 641 + (x << 1)] = g_scanline[x];
   }
 
+  /* Apparently some third-party software flips this bit incorrectly. */
+#ifndef ALLOW_NTSC_NOISE
   /*
    * If the display is in "TV" mode, just spew some NTSC noise into the buffer.
    *
@@ -1054,6 +1056,7 @@ void render_scanline(int line)
       display[r + x] = 0xFF000000 | (c << 16) | (c << 8) | (c);
     }
   }
+#endif
 
   /*
    * Draw the LEDs.
