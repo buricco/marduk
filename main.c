@@ -70,7 +70,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23g"
+#define VERSION "0.23h"
 
 /*
  * Forward declarations.
@@ -972,6 +972,8 @@ void render_scanline(int line)
   for (x=0; x<320; x++)
    display[r+x]=g_scanline[x];
 
+  /* Apparently some third-party software flips this bit incorrectly. */
+#ifndef ALLOW_NTSC_NOISE
   /*
    * If the display is in "TV" mode, just spew some NTSC noise into the buffer.
    *
@@ -990,6 +992,7 @@ void render_scanline(int line)
       display[r + x] = c?0x1F:0x10;
     }
   }
+#endif
 
   /*
    * Draw the LEDs.

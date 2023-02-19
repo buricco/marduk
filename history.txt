@@ -1,3 +1,8 @@
+0.24h (23021904)
+================
+
+  * Turned off the TV noise.  Compile with ALLOW_NTSC_NOISE to re-enable it.
+
 0.24g (23021817)
 ================
 
