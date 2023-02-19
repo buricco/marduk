@@ -70,7 +70,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23h"
+#define VERSION "0.23i"
 
 /*
  * Forward declarations.
@@ -116,6 +116,7 @@ PSG *psg;
 int ctrlreg;
 
 int gotmodem;
+unsigned dog_speed;
 
 /* Next cycle for scanline loop. */
 unsigned long next;
@@ -1352,13 +1353,23 @@ int main(int argc, char **argv)
 #endif
   
   noinitmodem=0;
+  
+  /*
+   * This relates to a yet-unresolved BUG in the emulation.
+   * 
+   * Some unofficial software insists on the speed of the watchdog timer being
+   * faster, while official software will throw a wobbly if it's that fast, so
+   * we set it to the old, mostly working speed, and allow the user to set the
+   * faster speed (-Q) if necessary.
+   */
+  dog_speed=58000;
 
   /* This is still relevant for MS-DOS, thank you Watt-32 */
   server = "127.0.0.1";
   port = "5816";
   
   bios = ROMFILE1;
-  while (-1 != (e = getopt(argc, argv, "48B:S:P:N")))
+  while (-1 != (e = getopt(argc, argv, "48B:S:P:NQ")))
   {
     switch (e)
     {
@@ -1380,9 +1391,12 @@ int main(int argc, char **argv)
     case 'P':
       port = optarg;
       break;
+    case 'Q':
+      dog_speed=80;
+      break;
     default:
       fprintf(stderr, 
-              "usage: %s [-4 | 8 | -B filename] [-S server] [-P port]\n",
+              "usage: %s [-4 | 8 | -B filename] [-Q] [-S server] [-P port]\n",
               argv[0]);
       return 1;
     }
@@ -1581,10 +1595,10 @@ int main(int argc, char **argv)
       if (keyboard_buffer_empty())
       {
         next_watchdog++;
-        if (next_watchdog >= 58000)
+        if (next_watchdog >= dog_speed)
         {
           next_watchdog = 0;
-          diag_printf("Keyboard: kicking the dog\n");
+          /* diag_printf("Keyboard: kicking the dog\n"); */
           keyboard_buffer_put(0x94);
         }
       }

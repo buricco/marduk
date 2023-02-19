@@ -1,9 +1,16 @@
-0.24h (23021904)
+0.23i (23021917)
+================
+
+  * Some third-party programs work better with a faster watchdog timer, but
+    that makes the official stuff pitch a fit.  Until resolved, added a new
+    switch, -Q, to enable "Quick Dog" mode.
+
+0.23h (23021904)
 ================
 
   * Turned off the TV noise.  Compile with ALLOW_NTSC_NOISE to re-enable it.
 
-0.24g (23021817)
+0.23g (23021817)
 ================
 
   * Windows version now uses native dialogs when going down in flames.
