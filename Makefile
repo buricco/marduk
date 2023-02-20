@@ -29,7 +29,7 @@ all:	marduk
 marduk:	dasm80.o emu2149.o main.o modem.o tms9918.o tms_util.o z80.o
 	$(CC) $(CFLAGS) -o marduk dasm80.o emu2149.o main.o modem.o tms9918.o tms_util.o z80.o $(LIBS)
 
-dasm80.o:	dasm80.o z80.h
+dasm80.o:	dasm80.c z80.h
 	$(CC) $(CFLAGS) -c -o dasm80.o dasm80.c
 
 emu2149.o:	emu2149.c emu2149.h

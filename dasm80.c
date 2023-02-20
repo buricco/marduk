@@ -1,3 +1,24 @@
+/*
+ * Copyright 2023 S. V. Nickolas.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following condition:  The
+ * above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #include <stdint.h>
 #include "z80.h"
 
@@ -244,7 +265,7 @@ zop tabmain[]={
  "CALL  $%04X", ARG16,
  "ADC   A, $%02X", ARG8,
  "RST   $08", NOTHING,
- "RET   NC", NOTHING,
+ "RETNC ", NOTHING,
  "POP   DE", NOTHING,
  "JP    NC, $%04X", ARG16,
  "OUT   ($%02X), A", ARG8,
@@ -252,7 +273,7 @@ zop tabmain[]={
  "PUSH  DE", NOTHING,
  "SUB   $%02X", ARG8,
  "RST   $10", NOTHING,
- "RET   C", NOTHING,
+ "RETC  ", NOTHING,
  "EXX   ", NOTHING,
  "JP    C, $%04X", ARG16,
  "IN    A, ($%02X)", ARG8,
@@ -260,7 +281,7 @@ zop tabmain[]={
  "", NOTHING,
  "SBC   A, $%02X", ARG8,
  "RST   $18", NOTHING,
- "RET   PO", NOTHING,
+ "RETPO ", NOTHING,
  "POP   HL", NOTHING,
  "JP    PO, $%04X", ARG16,
  "EX    (SP), HL", NOTHING,
@@ -268,7 +289,7 @@ zop tabmain[]={
  "PUSH  HL", NOTHING,
  "AND   $%02X", ARG8,
  "RST   $20", NOTHING,
- "RET   PE", NOTHING,
+ "RETPE ", NOTHING,
  "JP    (HL)", NOTHING,
  "JP    PE, $%04X", ARG16,
  "EX    DE, HL", NOTHING,
@@ -276,7 +297,7 @@ zop tabmain[]={
  "", NOTHING,
  "XOR   $%02X", ARG8,
  "RST   $28", NOTHING,
- "RET   P", NOTHING,
+ "RETP  ", NOTHING,
  "POP   AF", NOTHING,
  "JP    P, $%04X", ARG16,
  "DI    ",  NOTHING,
@@ -284,7 +305,7 @@ zop tabmain[]={
  "PUSH  AF", NOTHING,
  "OR    $%02X", ARG8,
  "RST   $30", NOTHING,
- "RET   M", NOTHING,
+ "RETM  ", NOTHING,
  "LD    SP, HL", NOTHING,
  "JP    M, $%04X", ARG16,
  "EI    ",  NOTHING,
@@ -1139,14 +1160,14 @@ zop tabmain[]={
  "JP     (IY)", NOTHING
 };
 
-void dasm (z80 *cpu, uint16_t addr)
+void dasm (z80 *cpu)
 {
  uint8_t c, d, e, f;
  uint16_t g, a;
  char *op;
  zop z;
  
- a=addr;
+ a=cpu->pc;
  c=cpu->read_byte(cpu->userdata, a++);
  d=0;
  /* CB DD ED FD */
@@ -1176,7 +1197,8 @@ void dasm (z80 *cpu, uint16_t addr)
  switch (z.fmt)
  {
   case ARG8:
-   g=cpu->read_byte(cpu->userdata, a++);
+   e=cpu->read_byte(cpu->userdata, a++);
+   g=e;
    break;
   case ARG16:
    e=cpu->read_byte(cpu->userdata, a++);
@@ -1192,7 +1214,7 @@ void dasm (z80 *cpu, uint16_t addr)
   default:
    g=0; /* irrelevant */
  }
- printf ("%04X- %02X ", addr, c);
+ printf ("%04X- %02X ", cpu->pc, c);
  if ((c==0xCB)||(c==0xDD)||(c==0xED)||(c==0xFD))
  {
   if (z.fmt==NOTHING)
@@ -1200,7 +1222,7 @@ void dasm (z80 *cpu, uint16_t addr)
   else if (z.fmt==ARG16)
    printf ("%02X %02X %02X ", d, e, f);
   else
-   printf ("%02X %02X    ", d, g);
+   printf ("%02X %02X    ", d, e);
  }
  else
  {
@@ -1209,7 +1231,7 @@ void dasm (z80 *cpu, uint16_t addr)
   else if (z.fmt==ARG16)
    printf ("%02X %02X    ", e, f);
   else
-   printf ("%02X       ", g);
+   printf ("%02X       ", e);
  }
  printf (z.disp, g);
  printf ("\n%04X-  AF=%02X%02X BC=%02X%02X DE=%02X%02X HL=%02X%02X SP=%04X\n"
