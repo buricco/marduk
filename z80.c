@@ -708,6 +708,7 @@ static inline void process_interrupts(z80* const z) {
 
     case 2:
       z->cyc += 19;
+      if((rw(z, (z->i << 8) | z->int_data)) == 0) break; /* HACK */
       call(z, rw(z, (z->i << 8) | z->int_data));
       break;
 

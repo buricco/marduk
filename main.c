@@ -70,7 +70,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23j"
+#define VERSION "0.23k"
 
 /*
  * Forward declarations.
