@@ -70,13 +70,17 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23i"
+#define VERSION "0.23j"
 
 /*
  * Forward declarations.
  */
 static void reinit_cpu(void);
 void fatal_diag(int, char *);
+
+#ifdef DEBUG
+void dasm (z80 *cpu);
+#endif
 
 /*
  * Speed control.
@@ -274,7 +278,7 @@ void int_prio_enc(int EI, int I0, int I1, int I2, int I3, int I4, int I5, int I6
   }
   else
   {
-    *Q0 = *Q1 = *Q2;
+    *Q0 = *Q1 = *Q2 = 1;
   }
 }
 
@@ -1624,6 +1628,9 @@ int main(int argc, char **argv)
       }
       next += 228;
     }
+#ifdef DEBUG
+    dasm(&cpu);
+#endif
     z80_step(&cpu);
   }
   
