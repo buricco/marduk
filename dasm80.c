@@ -56,7 +56,7 @@ static inline uint8_t get_f(z80* const z)
  * Every entry should be padded out to the length of the opcode; after that
  * does not matter.
  */
-zop tabmain[]={
+zop tabmain[256]={
  "NOP   ", NOTHING,
  "LD    BC, $%04X", ARG16,
  "LD    (BC), A", NOTHING,
@@ -313,7 +313,7 @@ zop tabmain[]={
  "", NOTHING,
  "CP    $%02X", ARG8,
  "RST   $38", NOTHING
-},tabcb[]={
+},tabcb[256]={
  "RLC   B", NOTHING,
  "RLC   C", NOTHING,
  "RLC   D", NOTHING,
@@ -570,7 +570,7 @@ zop tabmain[]={
  "SET   7, L", NOTHING,
  "SET   7, (HL)", NOTHING,
  "SET   7, A", NOTHING
-}, tabdd[]={
+}, tabdd[256]={
  "???   ", NOTHING,
  "???   ", NOTHING,
  "???   ", NOTHING,
@@ -820,7 +820,7 @@ zop tabmain[]={
  "???   ", NOTHING,
  "???   ", NOTHING,
  "???   ", NOTHING
-},tabed[]={
+},tabed[256]={
  "???   ", NOTHING,
  "???   ", NOTHING,
  "???   ", NOTHING,
@@ -1077,7 +1077,7 @@ zop tabmain[]={
  "???   ", NOTHING,
  "???   ", NOTHING,
  "???   ", NOTHING
-}, tabfd[]={
+}, tabfd[256]={
  "ADD    IY,BC", NOTHING,
  "ADD    IY,DE", NOTHING,
  "LD     IY,%04X", ARG16,
@@ -1184,7 +1184,7 @@ void dasm (z80 *cpu, uint16_t addr)
  else if (c==0xED)
  {
   d=cpu->read_byte(cpu->userdata, a++);
-  z=tabfd[d];
+  z=tabed[d];
  }
  else if (c==0xFD)
  {
