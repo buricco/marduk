@@ -1160,14 +1160,14 @@ zop tabmain[]={
  "JP     (IY)", NOTHING
 };
 
-void dasm (z80 *cpu)
+void dasm (z80 *cpu, uint16_t addr)
 {
  uint8_t c, d, e, f;
  uint16_t g, a;
  char *op;
  zop z;
  
- a=cpu->pc;
+ a=addr;
  c=cpu->read_byte(cpu->userdata, a++);
  d=0;
  /* CB DD ED FD */
@@ -1214,7 +1214,7 @@ void dasm (z80 *cpu)
   default:
    g=0; /* irrelevant */
  }
- printf ("%04X- %02X ", cpu->pc, c);
+ printf ("%04X- %02X ", addr, c);
  if ((c==0xCB)||(c==0xDD)||(c==0xED)||(c==0xFD))
  {
   if (z.fmt==NOTHING)
@@ -1234,8 +1234,14 @@ void dasm (z80 *cpu)
    printf ("%02X       ", e);
  }
  printf (z.disp, g);
- printf ("\n%04X-  AF=%02X%02X BC=%02X%02X DE=%02X%02X HL=%02X%02X SP=%04X\n"
-           "       IX=%04X IY=%04X          I=%02X    R=%02X\n",
+ putchar('\n');
+}
+
+void cpustatus (z80 *cpu)
+{
+ dasm(cpu, cpu->pc);
+ printf ("%04X-  AF=%02X%02X BC=%02X%02X DE=%02X%02X HL=%02X%02X SP=%04X\n"
+         "       IX=%04X IY=%04X          I=%02X    R=%02X\n",
          cpu->pc, cpu->a, get_f(cpu), cpu->b, cpu->c, cpu->d, cpu->e,
          cpu->h, cpu->l, cpu->sp, cpu->ix, cpu->iy, cpu->i, cpu->r);
 }

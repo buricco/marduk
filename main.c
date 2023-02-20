@@ -79,7 +79,9 @@ static void reinit_cpu(void);
 void fatal_diag(int, char *);
 
 #ifdef DEBUG
-void dasm (z80 *cpu);
+void cpustatus (z80 *cpu);
+
+int trace;
 #endif
 
 /*
@@ -867,15 +869,6 @@ void keyboard_poll(void)
         switch (event.key.keysym.sym)
         {
         /* F3 - reset */
-         case SDLK_F5:
-          keyjoy=0;
-          joybyte=0;
-          diag_printf ("Arrows and Space are KEYBOARD\n");
-          break;
-         case SDLK_F6:
-          keyjoy=1;
-          diag_printf ("Arrows and Space are JOYSTICK\n");
-          break;
         case SDLK_F3:
           diag_printf("Reset pressed\n");
 #ifndef _WIN32
@@ -889,6 +882,21 @@ void keyboard_poll(void)
           if (SDL_GetModState() & KMOD_ALT)
             death_flag = 1;
           break;
+         case SDLK_F5:
+          keyjoy=0;
+          joybyte=0;
+          diag_printf ("Arrows and Space are KEYBOARD\n");
+          break;
+         case SDLK_F6:
+          keyjoy=1;
+          diag_printf ("Arrows and Space are JOYSTICK\n");
+          break;
+#ifdef DEBUG
+         case SDLK_F7:
+          trace=!trace;
+          diag_printf ("CPU Trace is now %s\n", trace?"ON":"OFF");
+          break;
+#endif
         /* F10 - also exit */
         case SDLK_F10:
           death_flag = 1;
@@ -1355,6 +1363,10 @@ int main(int argc, char **argv)
 
   SDL_GetVersion(&sdlver);
 #endif
+
+#ifdef DEBUG
+  trace=0;
+#endif
   
   noinitmodem=0;
   
@@ -1629,7 +1641,7 @@ int main(int argc, char **argv)
       next += 228;
     }
 #ifdef DEBUG
-    dasm(&cpu);
+    if (trace) cpustatus(&cpu);
 #endif
     z80_step(&cpu);
   }
