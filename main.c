@@ -355,14 +355,11 @@ void update_interrupts()
   A1 - D2
   A2 - D8
   */
-  if (!GS)
-  {
-    // z80_gen_int(&cpu, (Q0 << 6) | (Q1 << 1) | (Q2 << 7));
-    z80_gen_int(&cpu, psg_portb & 0x0e);
-    // z80_gen_int(&cpu, prev_int_line);
-    // prev_int_line = (Q0 << 5) | (Q1 << 6) | (Q2 << 7);
-    // z80_gen_int(&cpu, !GS);
-  }
+  // z80_gen_int(&cpu, (Q0 << 6) | (Q1 << 1) | (Q2 << 7));
+  z80_gen_int(&cpu, !GS, psg_portb & 0x0e);
+  // z80_gen_int(&cpu, prev_int_line);
+  // prev_int_line = (Q0 << 5) | (Q1 << 6) | (Q2 << 7);
+  // z80_gen_int(&cpu, !GS);
 }
 
 char keyboard_buffer[256];
