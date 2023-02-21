@@ -26,6 +26,8 @@
  *       similar license terms.
  */
 
+#define VERSION "0.25"
+
 /* C99 includes */
 #include <errno.h>
 #include <stdint.h>
@@ -69,8 +71,6 @@
 
 /* Alterable filenames */
 #include "paths.h"
-
-#define VERSION "0.24a"
 
 /*
  * Forward declarations.
@@ -137,6 +137,7 @@ unsigned next_watchdog;
 /* keyboard/joystick? */
 int keyjoy;
 uint8_t joybyte;
+#define JOY_THRESH 2048 /* distance from center to "trip"; 0..32767 */
 
 #ifdef __MSDOS__
 /*
@@ -158,6 +159,7 @@ SDL_Renderer *renderer;
 SDL_Texture *texture;
 SDL_AudioDeviceID audio_device;
 SDL_AudioSpec audio_spec;
+SDL_Joystick *joystick;
 
 uint32_t *display;
 #endif
@@ -505,7 +507,8 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
 
 /*
  * XXX: We need a better way to do this to detect make and break from the 
- *      relevant keys.
+ *      relevant keys.  Like, say, grabbing INT9.  (But I'm not familiar with
+ *      that kind of stuff in 386 mode... -uso.)
  */
 void keyboard_poll()
 {
@@ -626,6 +629,74 @@ void keyboard_poll(void)
   /* eat up all events */
   while (SDL_PollEvent(&event))
   {
+    /* These are irrelevant if the keyboard is emulating the joystick */
+    if (!keyjoy)
+    {
+     /* Don't care what stick or what button.  Nabu only has one. */
+     switch (event.type)
+     {
+      case SDL_JOYHATMOTION:
+       joybyte&=0xF0;
+       switch (event.jhat.value)
+       {
+        case SDL_HAT_LEFTUP:
+         joybyte|=0x09;
+         break;
+        case SDL_HAT_UP:
+         joybyte|=0x08;
+         break;
+        case SDL_HAT_RIGHTUP:
+         joybyte|=0x0C;
+         break;
+        case SDL_HAT_LEFT:
+         joybyte|=0x01;
+         break;
+        case SDL_HAT_CENTERED:
+         /* Already done */
+         break;
+        case SDL_HAT_RIGHT:
+         joybyte|=0x04;
+         break;
+        case SDL_HAT_LEFTDOWN:
+         joybyte|=0x03;
+         break;
+        case SDL_HAT_DOWN:
+         joybyte|=0x02;
+         break;
+        case SDL_HAT_RIGHTDOWN:
+         joybyte|=0x06;
+         break;
+       }
+      case SDL_JOYAXISMOTION:
+       joybyte&=0xF0;
+       switch (event.jaxis.axis)
+       {
+        case 0: /* X */
+         if (event.jaxis.value<-JOY_THRESH)
+          joybyte|=0x01;
+         else if (event.jaxis.value>JOY_THRESH)
+          joybyte|=0x04;
+         break;
+        case 1: /* Y */
+         if (event.jaxis.value<-JOY_THRESH)
+          joybyte|=0x08;
+         else if (event.jaxis.value>JOY_THRESH)
+          joybyte|=0x02;
+         break;
+       }
+       break;
+      case SDL_JOYBUTTONDOWN:
+       joybyte |= 0x10;
+       keyboard_buffer_put(0x80);
+       keyboard_buffer_put(joybyte|0xA0);
+       break;
+      case SDL_JOYBUTTONUP:
+       joybyte &= 0xEF;
+       keyboard_buffer_put(0x80);
+       keyboard_buffer_put(joybyte|0xA0);
+       break;
+     }
+    }
     switch (event.type)
     {
     /*
@@ -1291,7 +1362,6 @@ void initty(void)
  if (!__djgpp_nearptr_enable())
  {
   fatal_diag (2, "FATAL: Could not get access to 8086 memory");
-  exit(2);
  }
  
  /* Enter MCGA graphics mode */
@@ -1534,6 +1604,8 @@ int main(int argc, char **argv)
 
   audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, NULL, 0);
   SDL_PauseAudioDevice(audio_device, 0);
+  
+  joystick=SDL_JoystickOpen(0); /* non-fatal; just NULL if none attached */
 #endif
 
   /*
@@ -1560,7 +1632,7 @@ int main(int argc, char **argv)
   }
   PSG_setVolumeMode(psg, 2);
   PSG_reset(psg);
-
+  
   /*
    * Load the ROM, then set it visible.
    */
@@ -1691,6 +1763,8 @@ int main(int argc, char **argv)
   vrEmuTms9918Destroy(vdp);
   free(display);
 #ifndef __MSDOS__
+  if (joystick)
+   SDL_JoystickClose(joystick);
   SDL_Quit();
 #endif
 
