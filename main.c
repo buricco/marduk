@@ -791,8 +791,6 @@ void keyboard_poll(void)
         SDL_Keymod m;
         int k;
         
-        if ((k==' ')&&keyjoy) break; /* we already handled this. */
-        
         /*
          * Shift/Ctrl translation.  Not the most efficient method.
          *
@@ -805,6 +803,8 @@ void keyboard_poll(void)
          */
 
         k = event.key.keysym.sym;
+        if ((k==' ')&&keyjoy) break; /* we already handled this. */
+        
         m = SDL_GetModState();
         if (m & KMOD_CTRL)
         {
