@@ -26,7 +26,7 @@
  *       similar license terms.
  */
 
-#define VERSION "0.25"
+#define VERSION "0.25a"
 
 /* C99 includes */
 #include <errno.h>
@@ -1476,6 +1476,7 @@ int main(int argc, char **argv)
   char *server, *port;
   int scanline;
   int noinitmodem;
+  int dojoy;
   
 #ifdef __MSDOS__
   ttyup=0;
@@ -1485,6 +1486,7 @@ int main(int argc, char **argv)
   SDL_GetVersion(&sdlver);
 #endif
 
+  dojoy=0;
   trace=0;
   noinitmodem=0;
   dog_speed=58000;
@@ -1494,7 +1496,7 @@ int main(int argc, char **argv)
   port = "5816";
   
   bios = ROMFILE1;
-  while (-1 != (e = getopt(argc, argv, "48B:S:P:N")))
+  while (-1 != (e = getopt(argc, argv, "48B:jJS:P:N")))
   {
     switch (e)
     {
@@ -1504,6 +1506,12 @@ int main(int argc, char **argv)
     case '8':
       bios = ROMFILE2;
       break;
+    case 'j':
+     dojoy=0;
+     break;
+    case 'J':
+     dojoy=1;
+     break;
     case 'B':
       bios = optarg;
       break;
@@ -1518,7 +1526,7 @@ int main(int argc, char **argv)
       break;
     default:
       fprintf(stderr, 
-              "usage: %s [-4 | 8 | -B filename] [-S server] [-P port]\n",
+              "usage: %s [-4 | 8 | -B filename] [-J] [-S server] [-P port]\n",
               argv[0]);
       return 1;
     }
@@ -1605,7 +1613,10 @@ int main(int argc, char **argv)
   audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, NULL, 0);
   SDL_PauseAudioDevice(audio_device, 0);
   
-  joystick=SDL_JoystickOpen(0); /* non-fatal; just NULL if none attached */
+  if (dojoy)
+   joystick=SDL_JoystickOpen(0); /* non-fatal; just NULL if none attached */
+  else
+   joystick=NULL;
 #endif
 
   /*

@@ -1,3 +1,8 @@
+0.25a (23022104)
+================
+
+  * Joystick support disabled by default; still compiled in; use -J to enable.
+
 0.25 (23022102)
 ===============
 
