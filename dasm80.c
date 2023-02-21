@@ -22,7 +22,6 @@
 #include <stdint.h>
 #include "z80.h"
 
-#ifdef DEBUG
 typedef enum
 {
  NOTHING,
@@ -1245,4 +1244,3 @@ void cpustatus (z80 *cpu)
          cpu->pc, cpu->a, get_f(cpu), cpu->b, cpu->c, cpu->d, cpu->e,
          cpu->h, cpu->l, cpu->sp, cpu->ix, cpu->iy, cpu->i, cpu->r);
 }
-#endif

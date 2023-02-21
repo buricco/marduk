@@ -1,3 +1,10 @@
+0.24 (23022021)
+===============
+
+  * Interrupt cascade fixed (thanks brijohn), some hacks removed
+  * Trace debug (F7), might become a proper debugger later
+  * -Q switch no longer needed, no longer supported.
+
 0.23l (23022019)
 ================
 

@@ -70,7 +70,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23l"
+#define VERSION "0.24"
 
 /*
  * Forward declarations.
@@ -78,11 +78,10 @@
 static void reinit_cpu(void);
 void fatal_diag(int, char *);
 
-#ifdef DEBUG
+/* Extern declaration */
 void cpustatus (z80 *cpu);
 
 int trace;
-#endif
 
 /*
  * Speed control.
@@ -355,14 +354,11 @@ void update_interrupts()
   A1 - D2
   A2 - D8
   */
-  if (!GS)
-  {
-    // z80_gen_int(&cpu, (Q0 << 6) | (Q1 << 1) | (Q2 << 7));
-    z80_gen_int(&cpu, psg_portb & 0x0e);
-    // z80_gen_int(&cpu, prev_int_line);
-    // prev_int_line = (Q0 << 5) | (Q1 << 6) | (Q2 << 7);
-    // z80_gen_int(&cpu, !GS);
-  }
+  // z80_gen_int(&cpu, (Q0 << 6) | (Q1 << 1) | (Q2 << 7));
+  z80_gen_int(&cpu, !GS, psg_portb & 0x0e);
+  // z80_gen_int(&cpu, prev_int_line);
+  // prev_int_line = (Q0 << 5) | (Q1 << 6) | (Q2 << 7);
+  // z80_gen_int(&cpu, !GS);
 }
 
 char keyboard_buffer[256];
@@ -894,12 +890,10 @@ void keyboard_poll(void)
           keyjoy=1;
           diag_printf ("Arrows and Space are JOYSTICK\n");
           break;
-#ifdef DEBUG
          case SDLK_F7:
           trace=!trace;
           diag_printf ("CPU Trace is now %s\n", trace?"ON":"OFF");
           break;
-#endif
         /* F10 - also exit */
         case SDLK_F10:
           death_flag = 1;
@@ -1367,10 +1361,7 @@ int main(int argc, char **argv)
   SDL_GetVersion(&sdlver);
 #endif
 
-#ifdef DEBUG
   trace=0;
-#endif
-  
   noinitmodem=0;
   
   /*
@@ -1388,7 +1379,7 @@ int main(int argc, char **argv)
   port = "5816";
   
   bios = ROMFILE1;
-  while (-1 != (e = getopt(argc, argv, "48B:S:P:NQ")))
+  while (-1 != (e = getopt(argc, argv, "48B:S:P:N")))
   {
     switch (e)
     {
@@ -1410,12 +1401,9 @@ int main(int argc, char **argv)
     case 'P':
       port = optarg;
       break;
-    case 'Q':
-      dog_speed=80;
-      break;
     default:
       fprintf(stderr, 
-              "usage: %s [-4 | 8 | -B filename] [-Q] [-S server] [-P port]\n",
+              "usage: %s [-4 | 8 | -B filename] [-S server] [-P port]\n",
               argv[0]);
       return 1;
     }
@@ -1643,9 +1631,7 @@ int main(int argc, char **argv)
       }
       next += 228;
     }
-#ifdef DEBUG
     if (trace) cpustatus(&cpu);
-#endif
     z80_step(&cpu);
   }
   

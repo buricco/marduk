@@ -689,7 +689,6 @@ static inline void process_interrupts(z80* const z) {
   }
 
   if (z->int_pending && z->iff1) {
-    z->int_pending = 0;
     z->halted = 0;
     z->iff1 = 0;
     z->iff2 = 0;
@@ -708,7 +707,6 @@ static inline void process_interrupts(z80* const z) {
 
     case 2:
       z->cyc += 19;
-      if((rw(z, (z->i << 8) | z->int_data)) == 0) break; /* HACK */
       call(z, rw(z, (z->i << 8) | z->int_data));
       break;
 
@@ -809,8 +807,8 @@ void z80_gen_nmi(z80* const z) {
 }
 
 /* function to call when an INT is to be serviced */
-void z80_gen_int(z80* const z, uint8_t data) {
-  z->int_pending = 1;
+void z80_gen_int(z80* const z, uint8_t state, uint8_t data) {
+  z->int_pending = state;
   z->int_data = data;
 }
 
