@@ -1,3 +1,8 @@
+0.23l (23022019)
+================
+
+  * Space registered as both key and button in joystick mode - fixed?
+
 0.23k (23022019)
 ================
 

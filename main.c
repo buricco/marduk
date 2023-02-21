@@ -70,7 +70,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.23k"
+#define VERSION "0.23l"
 
 /*
  * Forward declarations.
@@ -790,6 +790,9 @@ void keyboard_poll(void)
         static char *shiftnums = ")!@#$%^&*(";
         SDL_Keymod m;
         int k;
+        
+        if ((k==' ')&&keyjoy) break; /* we already handled this. */
+        
         /*
          * Shift/Ctrl translation.  Not the most efficient method.
          *
