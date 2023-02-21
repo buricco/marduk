@@ -964,6 +964,51 @@ void keyboard_poll(void)
           trace=!trace;
           diag_printf ("CPU Trace is now %s\n", trace?"ON":"OFF");
           break;
+#ifdef DEBUG
+        case SDLK_F9:
+        {
+         FILE *file;
+         char buf1[128],buf2[128];
+         uint16_t sa, a, s;
+         int c;
+         s=0;
+         printf ("import file>");
+         fgets(buf1,127,stdin);
+         buf1[strlen(buf1)-1]=0;
+         if (!*buf1) break;
+         
+         printf ("import addr>0x");
+         fgets(buf2,127,stdin);
+         buf2[strlen(buf2)-1]=0;
+         if (!*buf2) break;
+         
+         sa=a=strtol(buf2,0,16);
+         file=fopen(buf1,"rb");
+         if (!file)
+         {
+          perror(buf1);
+          break;
+         }
+         printf ("import '%s' $%04X ", buf1, a);
+         while (1)
+         {
+          c=fgetc(file);
+          if (c<0) break;
+          s++;
+          mem_write(NULL, (a++)&0xFFFF, c);
+         }
+         fclose(file);
+         printf ("L=$%04X\n", s);
+         printf ("go (y/n)? ");
+         fgets(buf1,127,stdin);
+         if ((*buf1=='y')||(*buf1=='y'))
+         {
+          cpu.pc=sa;
+          printf ("go to $%04X\n", sa);
+         }
+         break;
+        }
+#endif
         /* F10 - also exit */
         case SDLK_F10:
           death_flag = 1;
