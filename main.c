@@ -70,7 +70,7 @@
 /* Alterable filenames */
 #include "paths.h"
 
-#define VERSION "0.24"
+#define VERSION "0.24a"
 
 /*
  * Forward declarations.
@@ -88,6 +88,8 @@ int trace;
  *
  * Not exact, but it helps keep the speed more or less even based on how long
  * it takes to run one scanline's worth of code.
+ * 
+ * XXX: no support for this on MS-DOS.
  */
 #ifdef __MSDOS__
 
@@ -354,11 +356,7 @@ void update_interrupts()
   A1 - D2
   A2 - D8
   */
-  // z80_gen_int(&cpu, (Q0 << 6) | (Q1 << 1) | (Q2 << 7));
   z80_gen_int(&cpu, !GS, psg_portb & 0x0e);
-  // z80_gen_int(&cpu, prev_int_line);
-  // prev_int_line = (Q0 << 5) | (Q1 << 6) | (Q2 << 7);
-  // z80_gen_int(&cpu, !GS);
 }
 
 char keyboard_buffer[256];
@@ -417,7 +415,6 @@ uint8_t port_read(z80 *mycpu, uint8_t port)
     return 0;
   case 0x90: /* Not sure if this is the right action */
     t = keyboard_buffer_get();
-    // printf("KEYBOARD returned 0x%02X\r\n", t);
     keybdint = 0;
     update_interrupts();
     if (t == 255)
@@ -430,7 +427,6 @@ uint8_t port_read(z80 *mycpu, uint8_t port)
     return vrEmuTms9918ReadData(vdp);
   case 0xA1: /* Not sure if this is the right action */
     b = vrEmuTms9918ReadStatus(vdp);
-    // printf("VDP STATUS: 0x%02X\r\n", b);
     vdpint = 0;
     update_interrupts();
     return b;
@@ -458,11 +454,10 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
       {
         diag_printf("Writing to PORTA when it's set to input, DENIED!\r\n");
         diag_printf("psg_reg7 = %02X\r\n", psg_reg7);
-        // return;
       }
       if (val & 0x10)
       {
-        // printf("Bro, we want VDPINT for real, psg_reg7: 0x%02X, interrupts: 0x%02X\r\n", psg_reg7, interrupts);
+
       }
       if (psg_porta != val)
       {
@@ -476,7 +471,6 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
       {
         diag_printf("Writing to PORTB when it's set to input, DENIED!\r\n");
         diag_printf("psg_reg7 = %02X\r\n", psg_reg7);
-        // return;
       }
     }
     PSG_writeReg(psg, psg_reg_address, val);
@@ -508,6 +502,11 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
 }
 
 #ifdef __MSDOS__
+
+/*
+ * XXX: We need a better way to do this to detect make and break from the 
+ *      relevant keys.
+ */
 void keyboard_poll()
 {
  __dpmi_regs regs;
@@ -705,8 +704,8 @@ void keyboard_poll(void)
       break;
     case SDL_KEYDOWN:
       /*
-         * "Make key" codes for arrows.
-         */
+       * "Make key" codes for arrows.
+       */
       switch (event.key.keysym.sym)
       {
        case ' ':
@@ -1090,16 +1089,21 @@ void render_scanline(int line)
      {
       for (c=576; c<584; c++)
       {
-       display[r+c]=display[r+640+c]=0xFFFFFFFF;
+       display[r+c]=display[r+640+c]=0xFF333333;
       }
+     }
+     else if (line==232)
+     {
+      display[r+579]=display[r+580]=0xFFCC0000;
+      display[r+579+640]=display[r+580+640]=0xFF333333;
      }
      else
      {
-      display[r+579]=display[r+579+640]=0xFFFFFFFF;
-      display[r+580]=display[r+580+640]=0xFFFFFFFF;
+      display[r+579]=display[r+579+640]=0xFF333333;
+      display[r+580]=display[r+580+640]=0xFF333333;
      }
       
-     if (line==234) display[r+577]=display[r+577+640]=0xFFFFFFFF;
+     if (line==234) display[r+577]=display[r+577+640]=0xFFCC0000;
     }
 
     if (line == 232)
@@ -1321,6 +1325,13 @@ void initty(void)
  palette (0x1F, 0xFF, 0xFF, 0xFF);
 }
 
+/* Restore last tty state */
+void reinitty(void)
+{
+ initty();
+ memcpy (vgamem, display, 64000);
+}
+
 void deinitty(void)
 {
  __dpmi_regs regs;
@@ -1344,6 +1355,49 @@ void fatal_diag (int code, char *message)
  exit(code);
 }
 
+/*
+ * This is a stub.
+ * 
+ * Currently, when "trace" is on, we just dump the registers once a Z80
+ * operation.  This may be extended at some point in the future into a
+ * framework for a proper debugger.
+ * 
+ * This code is called from nowhere.
+ */
+void debugger (void)
+{
+ char buf[128];
+ 
+#ifdef __MSDOS__
+ deinitty();
+#endif
+ 
+ while (1)
+ {
+  cpustatus(&cpu);
+  putchar ('-');
+top:
+  fgets(buf, 127, stdin);
+  if (feof(stdin))
+  {
+   death_flag=1;
+   return;
+  }
+  buf[strlen(buf)-1]=0;
+  if (!*buf) return;
+  
+  if (*buf=='q')
+  {
+   death_flag=1;
+   return;
+  }
+ }
+ 
+#ifdef __MSDOS__
+ reinitty();
+#endif
+}
+
 int main(int argc, char **argv)
 {
   int e;
@@ -1363,15 +1417,6 @@ int main(int argc, char **argv)
 
   trace=0;
   noinitmodem=0;
-  
-  /*
-   * This relates to a yet-unresolved BUG in the emulation.
-   * 
-   * Some unofficial software insists on the speed of the watchdog timer being
-   * faster, while official software will throw a wobbly if it's that fast, so
-   * we set it to the old, mostly working speed, and allow the user to set the
-   * faster speed (-Q) if necessary.
-   */
   dog_speed=58000;
 
   /* This is still relevant for MS-DOS, thank you Watt-32 */
@@ -1593,7 +1638,6 @@ int main(int argc, char **argv)
       {
         keybdint = 1;
         update_interrupts();
-        // printf("KEYBOARD: int! %d %d\r\n", keyboard_buffer_read_ptr, keyboard_buffer_write_ptr);
       }
 
       every_scanline();
@@ -1605,7 +1649,6 @@ int main(int argc, char **argv)
         if (next_watchdog >= dog_speed)
         {
           next_watchdog = 0;
-          /* diag_printf("Keyboard: kicking the dog\n"); */
           keyboard_buffer_put(0x94);
         }
       }
@@ -1625,13 +1668,14 @@ int main(int argc, char **argv)
           {
             vdpint = 1;
             update_interrupts();
-            // printf("vdpint!\r\n");
           }
         }
       }
       next += 228;
     }
+#ifndef __MSDOS__
     if (trace) cpustatus(&cpu);
+#endif
     z80_step(&cpu);
   }
   

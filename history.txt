@@ -1,3 +1,9 @@
+0.24 (23022022)
+===============
+
+  * Stub for debugger
+  * Joystick icon primped up.
+
 0.24 (23022021)
 ===============
 
