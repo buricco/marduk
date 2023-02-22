@@ -1,3 +1,8 @@
+0.25d (23022219)
+================
+
+  * Code cleanup, rearrangement, minor fixes, more comments
+
 0.25c (23022217)
 ================
 
