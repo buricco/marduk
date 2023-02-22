@@ -26,7 +26,7 @@
  *       similar license terms.
  */
 
-#define VERSION "0.25b"
+#define VERSION "0.25c"
 
 /* C99 includes */
 #include <errno.h>
@@ -1628,6 +1628,11 @@ int main(int argc, char **argv)
     return 2;
   }
 
+  if (dojoy)
+   joystick=SDL_JoystickOpen(0); /* non-fatal; just NULL if none attached */
+  else
+   joystick=NULL;
+
   /*
    * SDL MUST be initialized before Gtk, or attempts to use Gtk will segvee. 
    * https://discourse.libsdl.org/t/gtk2-sdl2-partial-fail/19274
@@ -1680,11 +1685,6 @@ int main(int argc, char **argv)
 
   audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, NULL, 0);
   SDL_PauseAudioDevice(audio_device, 0);
-  
-  if (dojoy)
-   joystick=SDL_JoystickOpen(0); /* non-fatal; just NULL if none attached */
-  else
-   joystick=NULL;
 #endif
 
   /*
