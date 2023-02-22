@@ -26,7 +26,7 @@
  *       similar license terms.
  */
 
-#define VERSION "0.25a"
+#define VERSION "0.25b"
 
 /* C99 includes */
 #include <errno.h>
@@ -53,6 +53,11 @@
 #else
 /* SDL2 include */
 #include <SDL.h>
+
+/* XXX: and for OSX we use...? */
+#if (!defined(_WIN32))&&(!defined(__APPLE__))
+#include <gtk/gtk.h>
+#endif
 #define diag_printf printf
 #endif
 
@@ -1464,6 +1469,16 @@ void fatal_diag (int code, char *message)
 #ifdef _WIN32
  /* 16 = stop / red X */
  MessageBox(0, message, "Marduk", 16);
+#elif (!defined(__APPLE__))&&(!defined(__MSDOS__))
+ GtkWidget *widget;
+ 
+ widget=gtk_message_dialog_new(0, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, 
+                               GTK_BUTTONS_CLOSE, "Marduk");
+ gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(widget), "%s",
+                                          message);
+ 
+ gtk_dialog_run(GTK_DIALOG(widget));
+ gtk_widget_destroy(widget);
 #else
  fprintf(stderr, "%s\n", message);
 #endif
@@ -1527,7 +1542,7 @@ int main(int argc, char **argv)
   ttyup=0;
 #else
   SDL_version sdlver;
-
+  
   SDL_GetVersion(&sdlver);
 #endif
 
@@ -1584,7 +1599,7 @@ int main(int argc, char **argv)
   printf("Marduk version " VERSION " NABU Emulator\n"
 #endif
          "  Copyright 2022, 2023 S. V. Nickolas.\n"
-         "  Copyright 2023 Marcin Wołoszczuk.\n"
+         "  Copyright 2023 Marcin Woloszczuk.\n"
          "  Z80 emulation code copyright 2019 Nicolas Allemand.\n"
          "  Includes vrEmuTms9918 copyright 2021, 2022 Troy Schrapel.\n"
          "  Includes emu2149 copyright 2001-2022 Mitsutaka Okazaki.\n");
@@ -1612,6 +1627,14 @@ int main(int argc, char **argv)
     fatal_diag(2, "FATAL: Could not start SDL");
     return 2;
   }
+
+  /*
+   * SDL MUST be initialized before Gtk, or attempts to use Gtk will segvee. 
+   * https://discourse.libsdl.org/t/gtk2-sdl2-partial-fail/19274
+   */
+#if (!defined(_WIN32))&&(!defined(__APPLE__))
+  gtk_init(&argc, &argv);
+#endif
 
   screen = SDL_CreateWindow("Marduk", SDL_WINDOWPOS_UNDEFINED,
                             SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);

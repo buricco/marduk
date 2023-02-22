@@ -21,8 +21,8 @@
 # This should also work with Windows, using MinGW, if you do LIBS="-lws2_32"
 # Build with CFLAGS=-DDEBUG for CPU trace (will be better integrated later)
 
-CFLAGS := $(CFLAGS) `sdl2-config --cflags`
-LIBS   := $(LIBS) `sdl2-config --libs`
+CFLAGS := $(CFLAGS) `sdl2-config --cflags` `pkg-config gtk+-3.0 --cflags`
+LIBS   := $(LIBS) `sdl2-config --libs` `pkg-config gtk+-3.0 --libs`
 
 all:	marduk
 

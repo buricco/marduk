@@ -1,3 +1,11 @@
+0.25b (23022211)
+================
+
+  * On OSes other than MS-DOS, Windows and OSX (I refuse to use the current
+    name for anything but the original Macintosh operating system), Gtk is
+    used for error messages (in preparation to use it also for other GUI
+    elements which SDL lacks).
+
 0.25a (23022104)
 ================
 
