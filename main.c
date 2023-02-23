@@ -144,6 +144,8 @@ int keyjoy;
 uint8_t joybyte;
 #define JOY_THRESH 2048 /* distance from center to "trip"; 0..32767 */
 
+FILE *lpt;
+
 #ifdef __MSDOS__
 /*
  * display is an offscreen buffer which is blitted to the screen every frame.
@@ -500,6 +502,9 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
     return;
   case 0xA1:
     vrEmuTms9918WriteAddr(vdp, val);
+    return;
+  case 0xB0:
+    if (lpt) fputc(val, lpt);
     return;
 #ifdef PORT_DEBUG
   default:
@@ -1601,13 +1606,14 @@ int main(int argc, char **argv)
   trace=0;
   noinitmodem=0;
   dog_speed=58000;
+  lpt=NULL;
 
   /* This is still relevant for MS-DOS, thank you Watt-32 */
   server = "127.0.0.1";
   port = "5816";
   
   bios = ROMFILE1;
-  while (-1 != (e = getopt(argc, argv, "48B:jJS:P:N")))
+  while (-1 != (e = getopt(argc, argv, "48B:jJS:P:Np:")))
   {
     switch (e)
     {
@@ -1635,9 +1641,14 @@ int main(int argc, char **argv)
     case 'P':
       port = optarg;
       break;
+    case 'p':
+      if (lpt) fclose(lpt); /* in case multiple times specified */
+      lpt=fopen(optarg, "wb");
+      break;
     default:
       fprintf(stderr, 
-              "usage: %s [-4 | 8 | -B filename] [-S server] [-P port]\n",
+              "usage: %s [-4 | 8 | -B filename] [-S server] [-P port]"
+              " [-p file]\n",
               argv[0]);
       return 1;
     }
@@ -1916,6 +1927,7 @@ int main(int argc, char **argv)
 
   /* Clean up and exit properly. */
   printf("Shutting down emulation\n");
+  if (lpt) fclose(lpt);
   if (gotmodem)
     modem_deinit();
   PSG_delete(psg);

@@ -1,3 +1,8 @@
+0.25e (23022221)
+================
+
+  * First attempt at supporting the parallel port (-p file)
+
 0.25d (23022219)
 ================
 
