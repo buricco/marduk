@@ -26,7 +26,7 @@
  *       similar license terms.
  */
 
-#define VERSION "0.25e"
+#define VERSION "0.25f"
 
 /* C99 includes */
 #include <errno.h>
@@ -145,6 +145,7 @@ uint8_t joybyte;
 #define JOY_THRESH 2048 /* distance from center to "trip"; 0..32767 */
 
 FILE *lpt;
+uint8_t lpt_data;
 
 #ifdef __MSDOS__
 /*
@@ -453,6 +454,7 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
   switch (port)
   {
   case 0x00:
+    if ((val&0x04)&&(lpt)) fputc(lpt_data, lpt);
     ctrlreg = val;
     return;
   case 0x40: /* write data to PSG */
@@ -504,7 +506,7 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
     vrEmuTms9918WriteAddr(vdp, val);
     return;
   case 0xB0:
-    if (lpt) fputc(val, lpt);
+    if (lpt) lpt_data=val;
     return;
 #ifdef PORT_DEBUG
   default:

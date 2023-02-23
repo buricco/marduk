@@ -1,3 +1,8 @@
+0.25f (23022221)
+================
+
+  * Second attempt at supporting the parallel port
+
 0.25e (23022221)
 ================
 
