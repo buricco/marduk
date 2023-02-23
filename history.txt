@@ -1,3 +1,8 @@
+0.25g (23022221)
+================
+
+  * Third attempt at supporting the parallel port
+
 0.25f (23022221)
 ================
 

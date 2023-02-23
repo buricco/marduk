@@ -26,7 +26,7 @@
  *       similar license terms.
  */
 
-#define VERSION "0.25f"
+#define VERSION "0.25g"
 
 /* C99 includes */
 #include <errno.h>
@@ -454,7 +454,7 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
   switch (port)
   {
   case 0x00:
-    if ((val&0x04)&&(lpt)) fputc(lpt_data, lpt);
+    if ((val&0x04)&&(!(ctrlreg&0x04))&&(lpt)) fputc(lpt_data, lpt);
     ctrlreg = val;
     return;
   case 0x40: /* write data to PSG */
