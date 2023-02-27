@@ -144,6 +144,9 @@ int keyjoy;
 uint8_t joybyte;
 #define JOY_THRESH 2048 /* distance from center to "trip"; 0..32767 */
 
+int dojoy;
+void add_gamecontroller(int joystick_index);
+
 FILE *lpt;
 uint8_t lpt_data;
 
@@ -167,6 +170,7 @@ SDL_Renderer *renderer;
 SDL_Texture *texture;
 SDL_AudioDeviceID audio_device;
 SDL_AudioSpec audio_spec;
+SDL_GameController *pad;
 SDL_Joystick *joystick;
 
 uint32_t *display;
@@ -639,6 +643,38 @@ void keyboard_poll(void)
  if (k==0x4400) death_flag=1;
 }
 #else
+void add_gamecontroller(int joystick_index)
+{
+    if (joystick != NULL)
+      return;
+    
+    printf("Controller %d added: %s\n", joystick_index, SDL_JoystickNameForIndex(joystick_index));
+    pad=SDL_GameControllerOpen(joystick_index);
+    joystick=SDL_GameControllerGetJoystick(pad);
+    SDL_JoystickEventState(SDL_ENABLE);
+    SDL_GameControllerEventState(SDL_ENABLE);
+}
+
+void remove_gamecontroller(int joystick_index, bool last)
+{
+  printf("Controller %d removed\n", joystick_index);
+  SDL_JoystickClose(joystick);
+  SDL_GameControllerClose(pad);
+  joystick = NULL;
+  if (last)
+  {
+    /* .... No more rainbows for us to chase .... */
+    /* .... No more time to playyyyyyyyyyyyy .... */
+    SDL_GameControllerEventState(SDL_DISABLE);
+    SDL_JoystickEventState(SDL_DISABLE);
+  }
+}
+
+void send_joybyte() {
+  keyboard_buffer_put(0x80);
+  keyboard_buffer_put(joybyte|0xA0);
+}
+
 void keyboard_poll(void)
 {
   SDL_Event event;
@@ -651,41 +687,64 @@ void keyboard_poll(void)
      /* Don't care what stick or what button.  Nabu only has one. */
      switch (event.type)
      {
+      /* All new controller fancy: */
+      case SDL_CONTROLLERDEVICEADDED:
+        add_gamecontroller(event.jdevice.which);
+        break;
+      case SDL_CONTROLLERDEVICEREMOVED:
+        remove_gamecontroller(event.jdevice.which, SDL_NumJoysticks()==0);
+        break; 
+      
+      
+      case SDL_JOYBUTTONDOWN:
+        joybyte|=0x10;
+        send_joybyte();
+        break;
+        
+
+      case SDL_JOYBUTTONUP:
+        joybyte&=0xEF;
+        send_joybyte();
+        break;
+
       case SDL_JOYHATMOTION:
-       joybyte&=0xF0;
-       switch (event.jhat.value)
-       {
-        case SDL_HAT_LEFTUP:
-         joybyte|=0x09;
-         break;
-        case SDL_HAT_UP:
-         joybyte|=0x08;
-         break;
-        case SDL_HAT_RIGHTUP:
-         joybyte|=0x0C;
-         break;
-        case SDL_HAT_LEFT:
-         joybyte|=0x01;
-         break;
-        case SDL_HAT_CENTERED:
-         /* Already done */
-         break;
-        case SDL_HAT_RIGHT:
-         joybyte|=0x04;
-         break;
-        case SDL_HAT_LEFTDOWN:
-         joybyte|=0x03;
-         break;
-        case SDL_HAT_DOWN:
-         joybyte|=0x02;
-         break;
-        case SDL_HAT_RIGHTDOWN:
-         joybyte|=0x06;
-         break;
-       }
+        joybyte&=0xF0;
+        switch (event.jhat.value)
+        {
+          case SDL_HAT_LEFTUP:
+            joybyte|=0x09;
+            break;
+          case SDL_HAT_UP:
+            joybyte|=0x08;
+            break;
+          case SDL_HAT_RIGHTUP:
+            joybyte|=0x0C;
+            break;
+          case SDL_HAT_LEFT:
+            joybyte|=0x01;
+            break;
+          case SDL_HAT_CENTERED:
+            /* Already done */
+            break;
+          case SDL_HAT_RIGHT:
+            joybyte|=0x04;
+            break;
+          case SDL_HAT_LEFTDOWN:
+            joybyte|=0x03;
+            break;
+          case SDL_HAT_DOWN:
+            joybyte|=0x02;
+            break;
+          case SDL_HAT_RIGHTDOWN:
+            joybyte|=0x06;
+            break;
+        }
+        send_joybyte();
+        break;
+      
       case SDL_JOYAXISMOTION:
        joybyte&=0xF0;
-       switch (event.jaxis.axis)
+       switch (event.caxis.axis)
        {
         case 0: /* X */
          if (event.jaxis.value<-JOY_THRESH)
@@ -700,18 +759,12 @@ void keyboard_poll(void)
           joybyte|=0x02;
          break;
        }
+       send_joybyte();
        break;
-      case SDL_JOYBUTTONDOWN:
-       joybyte |= 0x10;
-       keyboard_buffer_put(0x80);
-       keyboard_buffer_put(joybyte|0xA0);
-       break;
-      case SDL_JOYBUTTONUP:
-       joybyte &= 0xEF;
-       keyboard_buffer_put(0x80);
-       keyboard_buffer_put(joybyte|0xA0);
-       break;
+      /* END new controller fancy */
+
      }
+     
     }
     switch (event.type)
     {
@@ -742,7 +795,7 @@ void keyboard_poll(void)
       case SDLK_DOWN:
         if (keyjoy)
         {
-         joybyte &= 0xFD;
+         joybyte &= 0xFE;
          keyboard_buffer_put(0x80);
          keyboard_buffer_put(joybyte|0xA0);
         }
@@ -1585,6 +1638,9 @@ top:
 #endif
 }
 
+
+
+
 int main(int argc, char **argv)
 {
   int e;
@@ -1593,7 +1649,7 @@ int main(int argc, char **argv)
   char *server, *port;
   int scanline;
   int noinitmodem;
-  int dojoy;
+  
   
 #ifdef __MSDOS__
   ttyup=0;
@@ -1710,9 +1766,16 @@ int main(int argc, char **argv)
    * Must be done as soon as possible after setting up SDL, especially on
    * Windows.  The Gtk voodoo can come earlier; it won't run on Windows.
    */
-  if (dojoy)
-   joystick=SDL_JoystickOpen(0); /* non-fatal; just NULL if none attached */
-  else
+
+  /* 
+    If you attempt in initialize a non-existent joystick, and then an
+    xinput device, it only emits some fraction of events, or none at all.
+  */
+  if (dojoy && SDL_NumJoysticks() > 0) { 
+    for (int i = 0; i < SDL_NumJoysticks(); i++) {
+      add_gamecontroller(i);  
+    }
+  } else
    joystick=NULL;
 
   /*
@@ -1936,8 +1999,10 @@ int main(int argc, char **argv)
   vrEmuTms9918Destroy(vdp);
   free(display);
 #ifndef __MSDOS__
-  if (joystick)
+  if (joystick) {
    SDL_JoystickClose(joystick);
+   SDL_GameControllerClose(pad);
+  }
   SDL_Quit();
 #endif
 
