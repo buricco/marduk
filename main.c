@@ -742,20 +742,20 @@ void keyboard_poll(void)
         send_joybyte();
         break;
       
-      case SDL_CONTROLLERAXISMOTION:
+      case SDL_JOYAXISMOTION:
        joybyte&=0xF0;
        switch (event.caxis.axis)
        {
         case 0: /* X */
-         if (event.caxis.value<-JOY_THRESH)
+         if (event.jaxis.value<-JOY_THRESH)
           joybyte|=0x01;
-         else if (event.caxis.value>JOY_THRESH)
+         else if (event.jaxis.value>JOY_THRESH)
           joybyte|=0x04;
          break;
         case 1: /* Y */
-         if (event.caxis.value<-JOY_THRESH)
+         if (event.jaxis.value<-JOY_THRESH)
           joybyte|=0x08;
-         else if (event.caxis.value>JOY_THRESH)
+         else if (event.jaxis.value>JOY_THRESH)
           joybyte|=0x02;
          break;
        }
