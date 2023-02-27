@@ -697,45 +697,14 @@ void keyboard_poll(void)
       
       
       case SDL_JOYBUTTONDOWN:
-        switch (event.cbutton.button) {
-          case SDL_CONTROLLER_BUTTON_A:
-            joybyte|=0x10;
-            send_joybyte();
-            break;
-          case SDL_CONTROLLER_BUTTON_B:
-            joybyte|=0x10;
-            send_joybyte();
-            break;
-          case SDL_CONTROLLER_BUTTON_X:
-            joybyte|=0x10;
-            send_joybyte();
-            break;
-          case SDL_CONTROLLER_BUTTON_Y:
-            joybyte|=0x10;
-            send_joybyte();
-            break;
-        }
+        joybyte|=0x10;
+        send_joybyte();
         break;
+        
 
       case SDL_JOYBUTTONUP:
-        switch (event.cbutton.button) {
-          case SDL_CONTROLLER_BUTTON_A:
-            joybyte&=0xEF;
-            send_joybyte();
-            break;
-          case SDL_CONTROLLER_BUTTON_B:
-            joybyte&=0xEF;
-            send_joybyte();
-            break;
-          case SDL_CONTROLLER_BUTTON_X:
-            joybyte&=0xEF;
-            send_joybyte();
-            break;
-          case SDL_CONTROLLER_BUTTON_Y:
-            joybyte&=0xEF;
-            send_joybyte();
-            break;
-        }
+        joybyte&=0xEF;
+        send_joybyte();
         break;
 
       case SDL_JOYHATMOTION:
