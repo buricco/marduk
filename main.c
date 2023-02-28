@@ -795,7 +795,7 @@ void keyboard_poll(void)
       case SDLK_DOWN:
         if (keyjoy)
         {
-         joybyte &= 0xFD;
+         joybyte &= 0xFE;
          keyboard_buffer_put(0x80);
          keyboard_buffer_put(joybyte|0xA0);
         }
