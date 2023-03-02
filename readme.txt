@@ -2,8 +2,8 @@ What is Marduk?
 ===============
 
   Marduk is an attempt to emulate the obscure Canadian NABU Personal Computer.
-  The code is in a very early state and very little works yet, but it's off to
-  a pretty good start.
+  It has quickly grown from a barely functional emulator to a fairly complete
+  (if bare-bones) and reasonably portable program.
 
 What is NABU?
 =============
@@ -36,22 +36,16 @@ Status
 
   The CPU, VDP and PSG are emulated via third-party code, which I have
   imported with minimal adaptation.  Also, libsdl2 is used for the front end
-  I/O code.
-
-  CPU - Tested, working.
-  VDP - Tested, working.
-  PSG - Tested, working.
-  Console lights - Tested, working.
-  Keyboard - Tested, working.
-  Joystick - Implemented through keyboard; see below.
-  Cable modem - Working, more or less.
-  Strict speed control - Tested (mostly with another emulator), working
-                         (except on MS-DOS and Windows).
+  I/O code.  Gtk+ is used for dialog boxes (except on Windows where the native
+  API is used instead).
+  
+  The modem emulation is reasonably complete.  There is not, at date, floppy
+  disk emulation, but it is being developed.
 
 Key bindings
 ============
 
-  Note: The keyboard interface code does not appear to be correct.
+  Prior to version 1.0, some of these changes may be subject to change.
 
   F3 = Reset
   F5 = Arrows and space route to the keyboard.
@@ -65,7 +59,8 @@ Key bindings
 ROM Files
 =========
 
-  No ROM files are included.
+  No ROM files are included (although perhaps, the OpenNabu IPL may be
+  included in the future).
   
   One of the following is expected:
   
