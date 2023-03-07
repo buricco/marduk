@@ -168,6 +168,7 @@ int disksys_init (void)
 {
  disk[0]=disk[1]=NULL;
  disktype[0]=disktype[1]=DISK_NONE;
+ diag_printf ("Initializing disk system\n");
 }
 
 int disksys_deinit (void)
@@ -175,5 +176,6 @@ int disksys_deinit (void)
  if (disk[0]) fclose(disk[0]);
  if (disk[1]) fclose(disk[1]);
  disktype[0]=disktype[1]=DISK_NONE;
+ diag_printf ("Shutting down disk system\n");
 }
 

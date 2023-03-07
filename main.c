@@ -26,7 +26,7 @@
  *       similar license terms.
  */
 
-#define VERSION "0.26"
+#define VERSION "0.26a"
 
 /* C99 includes */
 #include <errno.h>
@@ -409,6 +409,8 @@ uint8_t psg_reg_address = 0x00;
 uint8_t port_read(z80 *mycpu, uint8_t port)
 {
   uint8_t t, b;
+  
+  if ((port&0xF0)==0xC0) return disksys_read(port);
 
   switch (port)
   {
@@ -458,6 +460,9 @@ uint8_t port_read(z80 *mycpu, uint8_t port)
 void port_write(z80 *mycpu, uint8_t port, uint8_t val)
 {
   uint8_t psg_reg7;
+
+  if ((port&0xF0)==0xC0) disksys_write(port, val);
+
   switch (port)
   {
   case 0x00:
@@ -1634,9 +1639,6 @@ top:
 #endif
 }
 
-
-
-
 int main(int argc, char **argv)
 {
   int e;
@@ -1645,7 +1647,7 @@ int main(int argc, char **argv)
   char *server, *port;
   int scanline;
   int noinitmodem;
-  
+  char *inita, *initb;
   
 #ifdef __MSDOS__
   ttyup=0;
@@ -1661,6 +1663,7 @@ int main(int argc, char **argv)
   noinitmodem=0;
   dog_speed=58000;
   lpt=NULL;
+  inita=initb=NULL;
 
   /* This is still relevant for MS-DOS, thank you Watt-32 */
   server = "127.0.0.1";
@@ -1671,10 +1674,10 @@ int main(int argc, char **argv)
    * You can use actual Nabu firmware with the -4, -8 and -B switches.
    */
   bios = OPENNABU;
-  while (-1 != (e = getopt(argc, argv, "48B:jJS:P:Np:")))
+  while (-1 != (e = getopt(argc, argv, "48B:jJS:P:Np:a:b:")))
   {
-    switch (e)
-    {
+   switch (e)
+   {
     case '4':
       bios = ROMFILE1;
       break;
@@ -1703,13 +1706,19 @@ int main(int argc, char **argv)
       if (lpt) fclose(lpt); /* in case multiple times specified */
       lpt=fopen(optarg, "wb");
       break;
+    case 'a':
+      inita = optarg;
+      break;
+    case 'b':
+      initb = optarg;
+      break;
     default:
       fprintf(stderr, 
               "usage: %s [-4 | 8 | -B filename] [-S server] [-P port]"
               " [-p file]\n",
               argv[0]);
       return 1;
-    }
+   }
   }
 
   /* Copyrights for all components */
@@ -1900,6 +1909,16 @@ int main(int argc, char **argv)
   initty(); /* Now we're ready to kick into MCGA mode. */
   ttyup=1;
 #endif
+  
+  /*
+   * Set up the disk system and mount the disks.
+   */
+  disksys_init();
+  
+  if (inita)
+   disksys_insert(0, inita);
+  if (initb)
+   disksys_insert(1, inita);
 
   /*
    * Get ready to start the emulated Z80.
@@ -1998,6 +2017,7 @@ int main(int argc, char **argv)
   PSG_delete(psg);
   vrEmuTms9918Destroy(vdp);
   free(display);
+  disksys_deinit();
 #ifndef __MSDOS__
   if (joystick) {
    SDL_JoystickClose(joystick);
