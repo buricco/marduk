@@ -48,8 +48,7 @@ Key bindings
   Prior to version 1.0, some of these changes may be subject to change.
 
   F3 = Reset
-  F5 = Arrows and space route to the keyboard.
-  F6 = Arrows and space route to the P1 joystick.
+  F6 = Toggle whether arrows and space route to the keyboard or P1 joystick.
   F10 = Exit
   Ins and Del = Yes and No
   PgUp and PgDn = << and >>
@@ -58,21 +57,24 @@ Key bindings
 
 ROM Files
 =========
-
-  No ROM files are included (although perhaps, the OpenNabu IPL may be
-  included in the future).
   
+  The current stable version of OpenNabu is included from
+  https://6.buric.co/nabu/opennabu/
+  but you can use a real Nabu firmware if you prefer.
+
   One of the following is expected:
   
-    NabuPC-U53-90020060-RevA-2732.bin (-4, default)
+    opennabu.bin (default)
+    NabuPC-U53-90020060-RevA-2732.bin (-4)
     NabuPC-U53-90020060-RevB-2764.bin (-8)
-
+    
   If you have a different firmware you can try it with the -B switch.
 
 Using a Virtual Adapter (Cable Modem Emulator)
 ==============================================
 
-  The nabu.ca virtual adapter defaults to listening on 127.0.0.1:5816.
+  The nabu.ca (or several others) virtual adapter defaults to listening on
+  127.0.0.1:5816.
   
   If you need a different address, use the -S switch (e.g., -S 192.168.0.2).
   If you need a different port, use the -P switch (e.g., -P 5815).

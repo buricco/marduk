@@ -1,7 +1,6 @@
 /*
- * Copyright 2022, 2023 S. V. Nickolas.
- * Copyright 2023 Marcin Wołoszczuk.
- * 
+ * Copyright 2023 S. V. Nickolas.
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation
@@ -10,7 +9,7 @@
  * Software is furnished to do so, subject to the following condition:  The
  * above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -20,25 +19,17 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef H_PATHS
-#define H_PATHS
+#ifndef H_DISK
+#define H_DISK
+#include <stdint.h>
 
-#ifdef __MSDOS__
-# ifndef ROMFILE1
-#  define ROMFILE1 "nabu4k.bin"
-# endif /* ROMFILE1 */
-# ifndef ROMFILE2
-#  define ROMFILE2 "nabu8k.bin"
-# endif /* ROMFILE2 */
-#else
-# ifndef ROMFILE1
-#  define ROMFILE1 "NabuPC-U53-90020060-RevA-2732.bin"
-# endif /* ROMFILE1 */
-# ifndef ROMFILE2
-#  define ROMFILE2 "NabuPC-U53-90020060-RevB-2764.bin"
-# endif /* ROMFILE2 */
-#endif
+int disksys_init (void);
+int disksys_deinit (void);
 
-#define OPENNABU "opennabu.bin"
+uint8_t disksys_read (uint8_t);
+void disksys_write (uint8_t, uint8_t);
 
-#endif /* H_PATHS */
+int disksys_insert (int, char *);
+void disksys_eject (int);
+
+#endif /* H_DISK */

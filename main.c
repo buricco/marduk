@@ -26,7 +26,7 @@
  *       similar license terms.
  */
 
-#define VERSION "0.25h"
+#define VERSION "0.26"
 
 /* C99 includes */
 #include <errno.h>
@@ -70,6 +70,9 @@
 #include "tms_util.h"
 #include "emu2149.h"
 #include "z80.h"
+
+/* FDC include */
+#include "disk.h"
 
 /* Cable modem include */
 #include "modem.h"
@@ -631,12 +634,8 @@ void keyboard_poll(void)
 #endif
    reinit_cpu();
    break;
-  case 0x3F: /* F5 */
-   keyjoy=0;
-   joybyte=0;
-   break;
   case 0x40: /* F6 */
-   keyjoy=1;
+   keyjoy=!keyjoy;
    break;
  }
  
@@ -1022,14 +1021,11 @@ void keyboard_poll(void)
          if (SDL_GetModState() & KMOD_ALT)
            death_flag = 1;
          break;
-        case SDLK_F5: /* F5 - disable keyboard joystick */
-         keyjoy=0;
-         joybyte=0;
-         diag_printf ("Arrows and Space are KEYBOARD\n");
-         break;
         case SDLK_F6: /* F6 - enable keyboard joystick */
-         keyjoy=1;
-         diag_printf ("Arrows and Space are JOYSTICK\n");
+         keyjoy=!keyjoy;
+         joybyte=0;
+         diag_printf ("Arrows and Space are %s\n",
+                      keyjoy?"JOYSTICK":"KEYBOARD");
          break;
         case SDLK_F7: /* F7 - trace (later will be enter debugger) */
          trace=!trace;
@@ -1670,7 +1666,11 @@ int main(int argc, char **argv)
   server = "127.0.0.1";
   port = "5816";
   
-  bios = ROMFILE1;
+  /*
+   * Default ROM is now OpenNabu (opennabu.bin).
+   * You can use actual Nabu firmware with the -4, -8 and -B switches.
+   */
+  bios = OPENNABU;
   while (-1 != (e = getopt(argc, argv, "48B:jJS:P:Np:")))
   {
     switch (e)

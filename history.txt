@@ -1,3 +1,12 @@
+0.26 (23030717)
+===============
+
+  * Switched default BIOS to OpenNabu Stable.  Use -4 for original BIOS.
+    Source at https://6.buric.co/nabu/opennabu/opennabu-23022707.a80
+  * Disk stubs (not currently connected).
+  * Changed keyboard joystick select from two keys (F5 and F6) to a toggle
+    (F6 only).
+
 0.25h (23022802)
 ================
 
