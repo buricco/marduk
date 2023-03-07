@@ -29,7 +29,11 @@ int disksys_deinit (void);
 uint8_t disksys_read (uint8_t);
 void disksys_write (uint8_t, uint8_t);
 
+void disksys_tick (void);
+
 int disksys_insert (int, char *);
 void disksys_eject (int);
+
+extern int disksys_light;
 
 #endif /* H_DISK */

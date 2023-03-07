@@ -41,6 +41,8 @@ static DISKTYPE disktype[2];
 
 static uint8_t trk, sec, dat, stat;
 
+int disksys_light;
+
 #define DSK_ENRDY 0x80  /* Drive not ready             */
 #define DSK_WRPRT 0x40  /* Write protect               */
 #define DSK_ETYPE 0x20  /* Data mark deleted           */
@@ -96,6 +98,7 @@ void disksys_write (uint8_t port, uint8_t data)
    dat=data;
    break;
   case 0xF:
+   disksys_light=(data&0x06)>>1;
    diag_printf ("FDC CARD: received message $%02X\n", data);
    break;
   default:
@@ -103,6 +106,10 @@ void disksys_write (uint8_t port, uint8_t data)
                 port, data);
    break;
  }
+}
+
+void disksys_tick (void)
+{
 }
 
 void disksys_eject (int drive)
@@ -169,6 +176,7 @@ int disksys_init (void)
  disk[0]=disk[1]=NULL;
  disktype[0]=disktype[1]=DISK_NONE;
  diag_printf ("Initializing disk system\n");
+ disksys_light=0;
 }
 
 int disksys_deinit (void)
@@ -177,5 +185,6 @@ int disksys_deinit (void)
  if (disk[1]) fclose(disk[1]);
  disktype[0]=disktype[1]=DISK_NONE;
  diag_printf ("Shutting down disk system\n");
+ disksys_light=0;
 }
 

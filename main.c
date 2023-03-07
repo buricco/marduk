@@ -26,7 +26,7 @@
  *       similar license terms.
  */
 
-#define VERSION "0.26a"
+#define VERSION "0.26b"
 
 /* C99 includes */
 #include <errno.h>
@@ -1226,6 +1226,7 @@ void render_scanline(int line)
 void render_scanline(int line)
 {
   int x;
+  int t;
   uint32_t r;
   uint32_t bg;
   uint8_t a_scanline[256];
@@ -1294,6 +1295,18 @@ void render_scanline(int line)
     uint32_t le[3], ri[3];
 
     r = line * 1280;
+    
+    if (disksys_light&0x01)
+    {
+     for (t=8; t<16; t++)
+      display[r+t]=display[r+640+t]=0xFFCC0000;
+    }
+    
+    if (disksys_light&0x02)
+    {
+     for (t=24; t<32; t++)
+      display[r+t]=display[r+640+t]=0xFFCC0000;
+    }
     
     if (keyjoy)
     {
