@@ -26,7 +26,7 @@
  *       similar license terms.
  */
 
-#define VERSION "0.26b"
+#define VERSION "0.26c"
 
 /* C99 includes */
 #include <errno.h>
@@ -1048,6 +1048,19 @@ void keyboard_poll(void)
          char buf1[128],buf2[128];
          uint16_t sa, a, s;
          int c;
+         
+         if (SDL_GetModState() & KMOD_CTRL)
+         {
+          file=fopen("marduk.dmp", "wb");
+          if (file)
+          {
+           fwrite(RAM, 1, 65536, file);
+           fclose(file);
+           printf ("dumped RAM to marduk.dmp\n");
+          }
+          break;
+         }
+         
          s=0;
          printf ("import file>");
          fgets(buf1,127,stdin);
@@ -1965,6 +1978,8 @@ int main(int argc, char **argv)
   {
     if (cpu.cyc > next)
     {
+      disksys_tick();
+      
       /* if there are bytes available in the modem,
        generate the buffer ready interrupt */
       if (modem_bytes_available())
