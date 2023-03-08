@@ -40,8 +40,21 @@ static FILE *disk[2];
 static DISKTYPE disktype[2];
 
 static uint8_t trk, sec, dat, stat;
-
+static uint8_t ctrk;
 int disksys_light;
+
+/*
+ * We only try to do a very sloppy emulation of the controller sufficient to
+ * run CP/M 3.1 from Leo Binkowski's disks.
+ * 
+ * Every so often we need to generate an index pulse so our disk code (e.g.,
+ * OpenNabu's FD-IPL) can tell that a disk is present in the drive.  If we are
+ * asked for the index hole status, we can check:
+ *   * ((((unsigned)(disksys_light-1))<2)&&(!tick))
+ *   * (disk[((unsigned)(disksys_light-1))]!=NULL)
+ * and if both of these are true, then there's an index hole.
+ */
+static int tick, subtick;
 
 #define DSK_ENRDY 0x80  /* Drive not ready             */
 #define DSK_WRPRT 0x40  /* Write protect               */
@@ -56,9 +69,76 @@ int disksys_light;
 #define DSK_INDEX 0x02  /* Index hole detected         */
 #define DSK_BUSY  0x01  /* Busy                        */
 
+#define DM_NONE   0
+#define DM_RDSEC  1
+
+static int mode;
+
+static uint8_t buf[1024];
+static int bufptr;
+static int buflen;
+
 static void disksys_do (uint8_t data)
 {
- diag_printf ("FDC: command $%02X, T=$%02X S=$02X D=$02X\n", data,
+ unsigned d;
+ size_t off;
+
+ d=disksys_light-1;
+ 
+ switch (data)
+ {
+  case 0x07:
+  case 0x09:
+   diag_printf ("FDC: RESTORE\n");
+   trk=0;
+   stat&=(~(DSK_BUSY|DSK_ENRDY));
+   return;
+  case 0x59:
+   diag_printf ("FDC: tick up\n");
+   trk++;
+   return;
+  case 0x88: /* RDSEC LEN=0400 */
+   stat&=(~(DSK_ENRDY|DSK_ESEEK));
+   if (d>=2)
+   {
+    diag_printf ("FDC: read from bad drive\n");
+    stat|=DSK_ENRDY;
+    return;
+   }
+   if ((!sec)||(sec>5))
+   {
+    diag_printf ("FDC: invalid sector number $%02X\n", sec);
+    stat|=DSK_ESEEK;
+    return;
+   }
+   off=trk;
+   off*=5;
+   off+=(sec-1);
+   off<<=10; /* *1024 */
+   fseek(disk[d], off, SEEK_SET);
+   bufptr=0;
+   diag_printf ("FDC: read from %c:  T%02X S%02X\n", d+'A', trk, sec);
+   fread(buf, 1, 1024, disk[d]);
+   stat|=DSK_DRQ;
+   mode=DM_RDSEC;
+   buflen=1024;
+   return;
+  case 0xC0:
+   diag_printf ("FDC: status\n");
+   buf[0]=trk;
+   buf[1]=0; /* side */
+   buf[2]=sec;
+   buf[3]=0x03; /* XXX is this correct? - 1024 BPS */
+   buf[4]=buf[5]=0; /* "CRC" */
+   buflen=6;
+   mode=DM_RDSEC;
+   return;
+  case 0xD0:
+   diag_printf ("FDC: IRQ\n");
+   stat&=(~(DSK_BUSY|DSK_ENRDY));
+   return;
+ }
+ diag_printf ("FDC: command $%02X, T=$%02X S=$%02X D=$%02X\n", data,
               trk, sec, dat);
 }
 
@@ -73,6 +153,18 @@ uint8_t disksys_read (uint8_t port)
   case 0x2:
    return sec;
   case 0x3:
+   if (mode==DM_RDSEC)
+   {
+    if (bufptr==buflen-1)
+    {
+     mode=0;
+     stat&=(~DSK_DRQ);
+    }
+    else
+    {
+     return buf[bufptr++];
+    }
+   }
    return dat;
   case 0xF:
    return 0x10;
@@ -110,6 +202,21 @@ void disksys_write (uint8_t port, uint8_t data)
 
 void disksys_tick (void)
 {
+ while (tick>512) tick-=512;
+ if (!mode)
+ {
+  unsigned d;
+  
+  d=disksys_light-1;
+  stat &= (~DSK_INDEX);
+  if (d<2)
+  {
+   if (disk[d]&&(!tick)) 
+   {
+    stat|=DSK_INDEX;
+   }
+  }
+ }
 }
 
 void disksys_eject (int drive)
@@ -177,6 +284,7 @@ int disksys_init (void)
  disktype[0]=disktype[1]=DISK_NONE;
  diag_printf ("Initializing disk system\n");
  disksys_light=0;
+ mode=tick=subtick=0;
 }
 
 int disksys_deinit (void)
