@@ -26,7 +26,7 @@
  *       similar license terms.
  */
 
-#define VERSION "0.26c"
+#define VERSION "0.26d"
 
 /* C99 includes */
 #include <errno.h>
@@ -520,6 +520,11 @@ void port_write(z80 *mycpu, uint8_t port, uint8_t val)
   case 0xB0:
     if (lpt) lpt_data=val;
     return;
+#ifdef DEBUG
+  case 0xBF: /* debug port */
+    trace=val;
+    return;
+#endif
 #ifdef PORT_DEBUG
   default:
     printf("WARNING: unknown port write (0x%02X): 0x%02X\n", port, val);
@@ -778,6 +783,10 @@ void keyboard_poll(void)
     case SDL_KEYUP:
       switch (event.key.keysym.sym)
       {
+       case SDLK_LALT: /* Alt for Sym */
+       case SDLK_RALT:
+        keyboard_buffer_put(0xF8);
+        break;
        case ' ':
         if (keyjoy)
         {
@@ -852,6 +861,10 @@ void keyboard_poll(void)
        */
       switch (event.key.keysym.sym)
       {
+       case SDLK_LALT: /* Alt for Sym */
+       case SDLK_RALT:
+        keyboard_buffer_put(0xE8);
+        break;
        case ' ':
         if (keyjoy)
         {
