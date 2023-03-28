@@ -1489,7 +1489,7 @@ static int init_rom(char *filename)
   {
     fclose(file);
     fatal_diag(2, "FATAL: Size of ROM file is incorrect"
-                  "  (expected size is 4096 or 8192 bytes)\n");
+                  "  (expected size is 4096 or 8192 bytes)");
 
     return 2;
   }
@@ -1687,6 +1687,7 @@ int main(int argc, char **argv)
   int scanline;
   int noinitmodem;
   char *inita, *initb;
+  char *cpmexec;
   
 #ifdef __MSDOS__
   ttyup=0;
@@ -1703,6 +1704,7 @@ int main(int argc, char **argv)
   dog_speed=58000;
   lpt=NULL;
   inita=initb=NULL;
+  cpmexec=NULL;
 
   /* This is still relevant for MS-DOS, thank you Watt-32 */
   server = "127.0.0.1";
@@ -1713,7 +1715,7 @@ int main(int argc, char **argv)
    * You can use actual Nabu firmware with the -4, -8 and -B switches.
    */
   bios = OPENNABU;
-  while (-1 != (e = getopt(argc, argv, "48B:jJS:P:Np:a:b:")))
+  while (-1 != (e = getopt(argc, argv, "48B:jJS:P:Np:a:b:x:")))
   {
    switch (e)
    {
@@ -1750,6 +1752,9 @@ int main(int argc, char **argv)
       break;
     case 'b':
       initb = optarg;
+      break;
+    case 'x':
+      cpmexec = optarg;
       break;
     default:
       fprintf(stderr, 
@@ -1985,6 +1990,29 @@ int main(int argc, char **argv)
   int i;
 
   int16_t sound_sample = 0;
+  
+  /*
+   * A quick and dirty way to run certain apps from the command line.
+   * No, I am NOT documenting the "-x" switch in the manual.
+   */
+  if (cpmexec)
+  {
+    size_t l;
+    FILE *file;
+    printf ("CP/M application: %s\n", cpmexec);
+    file = fopen(cpmexec, "rt");
+    if (!file)
+    {
+      fatal_diag(1, "FATAL: Could not read CP/M application");
+    }
+    fseek (file, 0, SEEK_END);
+    l=ftell(file);
+    fseek (file, 0, SEEK_SET);
+    fread (&(RAM[0x0100]), 1, l, file);
+    fclose (file);
+    ctrlreg |= 0x01; /* Turn off the ROM */
+    cpu.pc = 0x0100; /* Skip all initialization, enter the program */
+  }
 
   /* Main event loop */
   while (!death_flag)
