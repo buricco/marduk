@@ -1,3 +1,9 @@
+0.26e (23051218)
+================
+
+  * Emulated FDC now sets BUSY when in read mode, CP/M gets further
+    (Still not good enough for ROM B)
+
 0.26d (23032321)
 ================
 

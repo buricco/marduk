@@ -119,7 +119,7 @@ static void disksys_do (uint8_t data)
    bufptr=0;
    diag_printf ("FDC: read from %c:  T%02X S%02X\n", d+'A', trk, sec);
    fread(buf, 1, 1024, disk[d]);
-   stat|=DSK_DRQ;
+   stat|=DSK_DRQ|DSK_BUSY;
    mode=DM_RDSEC;
    buflen=1024;
    return;
@@ -158,7 +158,7 @@ uint8_t disksys_read (uint8_t port)
     if (bufptr==buflen-1)
     {
      mode=0;
-     stat&=(~DSK_DRQ);
+     stat&=(~(DSK_DRQ|DSK_BUSY));
     }
     else
     {
