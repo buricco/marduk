@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifdef __MSDOS__
 #define diag_printf(...)
@@ -42,6 +43,15 @@ static DISKTYPE disktype[2];
 static uint8_t trk, sec, dat, stat;
 static uint8_t ctrk;
 int disksys_light;
+
+/* Out of band data for a 200K floppy */
+static uint8_t oob200[38]={
+ 0xA1, 0xA1, 0x4E, 0x4E, 0x4E, 0x4E, 0x4E, 0x4E, 
+ 0x4E, 0x4E, 0x4E, 0x4E, 0x4E, 0x4E, 0x00, 0x00, 
+ 0x00, 0x00, 0x00, 0x28, 0x00, 0x03, 0x07, 0x00, 
+ 0xC2, 0x00, 0x5F, 0x00, 0xE0, 0x00, 0x00, 0x18, 
+ 0x01, 0x00, 0x03, 0x07, 0x4E, 0xFB
+};
 
 /*
  * We only try to do a very sloppy emulation of the controller sufficient to
@@ -111,6 +121,8 @@ static void disksys_do (uint8_t data)
     stat|=DSK_ESEEK;
     return;
    }
+   
+   /* XXX: account for double side? */
    off=trk;
    off*=5;
    off+=(sec-1);
@@ -136,6 +148,14 @@ static void disksys_do (uint8_t data)
   case 0xD0:
    diag_printf ("FDC: IRQ\n");
    stat&=(~(DSK_BUSY|DSK_ENRDY));
+   return;
+  case 0xE0: /* You dirty, dirty rat! */
+   printf ("FDC: dirty hack: sent OOB data\n");
+   memcpy(buf, oob200, 38);
+   bufptr=0;
+   buflen=38;
+   stat|=DSK_DRQ|DSK_BUSY;
+   mode=DM_RDSEC;
    return;
  }
  diag_printf ("FDC: command $%02X, T=$%02X S=$%02X D=$%02X\n", data,
