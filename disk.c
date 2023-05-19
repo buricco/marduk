@@ -305,6 +305,7 @@ int disksys_init (void)
  diag_printf ("Initializing disk system\n");
  disksys_light=0;
  mode=tick=subtick=0;
+ return 0;
 }
 
 int disksys_deinit (void)
@@ -314,5 +315,6 @@ int disksys_deinit (void)
  disktype[0]=disktype[1]=DISK_NONE;
  diag_printf ("Shutting down disk system\n");
  disksys_light=0;
+ return 0;
 }
 
