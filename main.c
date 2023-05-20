@@ -30,6 +30,7 @@
 
 /* C99 includes */
 #include <errno.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1469,6 +1470,68 @@ static void reinit_cpu(void)
   cpu.userdata = tmp;
 }
 
+#ifndef ROM_PATHSPEC
+#define	ROM_PATHSPEC	NULL
+#endif
+
+#define	ROM_PATH_ENV_VAR	"MARDUK_ROM_PATH"
+
+static char ** get_rom_paths(void)
+{
+  char **ret_array;
+  char *cp;
+  char *pathspec = NULL;
+  const char *ccp;
+  const char *const_pathspec;
+  size_t size = 0;
+  int count, i;
+
+  const_pathspec = getenv(ROM_PATH_ENV_VAR);
+  if (!const_pathspec)
+  {
+    const_pathspec = ROM_PATHSPEC;
+  }
+  if (const_pathspec)
+  {
+    size = strlen(const_pathspec) + 1;
+  }
+
+  /* Count the number of paths in the pathspec. */
+  for (ccp = const_pathspec, count = 0;
+       ccp != NULL && *ccp != '\0'; ccp = cp)
+  {
+    count++;
+    cp = strchr(ccp, ':');
+    if (cp != NULL)
+    {
+      cp++;
+    }
+  }
+
+  size += sizeof(char *) * (count + 1);
+  ret_array = calloc(1, size);
+
+  /* This is a safe strcpy(). */
+  if (const_pathspec)
+  {
+    pathspec = (char *)&ret_array[count + 1];
+    strcpy(pathspec, const_pathspec);
+  }
+
+  for (cp = pathspec, count = 0; cp != NULL && *cp != '\0';)
+  {
+    ret_array[count++] = cp;
+    cp = strchr(cp, ':');
+    if (cp != NULL)
+    {
+      *cp++ = '\0';
+    }
+  }
+  ret_array[count] = NULL;
+
+  return ret_array;
+}
+
 /*
  * Open ROM.
  */
@@ -1476,13 +1539,32 @@ static int init_rom(char *filename)
 {
   int e;
   FILE *file;
+  char **rom_paths = get_rom_paths();
+  char **saved_rom_paths = rom_paths;
+  char rom_path[PATH_MAX];
 
-  file = fopen(filename, "rb");
-  if (!file)
+  for (;; rom_paths++)
   {
-    fatal_diag(1, "FATAL: Failed to open ROM file");
-    return 1;
+    snprintf(rom_path, sizeof(rom_path), "%s%s%s",
+            *rom_paths ? *rom_paths : "",
+	    *rom_paths ? "/" : "",
+	    filename);
+    printf("trying '%s'\n", rom_path);
+
+    file = fopen(rom_path, "rb");
+    if (file)
+    {
+      free(saved_rom_paths);
+      break;
+    }
+    if (!*rom_paths)
+    {
+      fatal_diag(1, "FATAL: Failed to open ROM file");
+      free(saved_rom_paths);
+      return 1;
+    }
   }
+
   fseek(file, 0, SEEK_END);
   romsize = ftell(file);
   if ((romsize != 4096) && (romsize != 8192))
