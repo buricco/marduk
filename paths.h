@@ -32,29 +32,25 @@
  * OPENNABU = location of OpenNabu IPL (default ROM).
  */
 
-#ifndef ROMBASE
-# define ROMBASE "."
-#endif
-
 #ifdef __MSDOS__
 # ifndef ROMFILE1
-#  define ROMFILE1 ROMBASE "/nabu4k.bin"
+#  define ROMFILE1 "nabu4k.bin"
 # endif /* ROMFILE1 */
 # ifndef ROMFILE2
-#  define ROMFILE2 ROMBASE "/nabu8k.bin"
+#  define ROMFILE2 "nabu8k.bin"
 # endif /* ROMFILE2 */
 # ifndef OPENNABU
-#  define OPENNABU ROMBASE "/opennabu.bin"
+#  define OPENNABU "opennabu.bin"
 # endif
 #else
 # ifndef ROMFILE1
-#  define ROMFILE1 ROMBASE "/NabuPC-U53-90020060-RevA-2732.bin"
+#  define ROMFILE1 "NabuPC-U53-90020060-RevA-2732.bin"
 # endif /* ROMFILE1 */
 # ifndef ROMFILE2
-#  define ROMFILE2 ROMBASE "/NabuPC-U53-90020060-RevB-2764.bin"
+#  define ROMFILE2 "NabuPC-U53-90020060-RevB-2764.bin"
 # endif /* ROMFILE2 */
 # ifndef OPENNABU
-#  define OPENNABU ROMBASE "/opennabu.bin"
+#  define OPENNABU "opennabu.bin"
 # endif
 #endif
 
